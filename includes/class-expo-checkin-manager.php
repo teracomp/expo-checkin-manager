@@ -154,6 +154,22 @@ class Expo_Checkin_Manager {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
+		// Add menu item
+		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_admin_menu' );
+
+		// Add Settings link to the plugin
+		$plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
+		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
+
+		// Save/Update our plugin options
+		$this->loader->add_action('admin_init', $plugin_admin, 'options_update'); // calls public function in class-[plugin-name]-admin.php
+		
+//        $this->loader->add_action( 'login_enqueue_scripts', $plugin_admin, 'wp_cbf_login_css' );
+		
+		// when the button is clicked, do_action('exm_show_reg_data') fires class-expo-checkin-manager-admin=>'show_registrant_data'
+		$this->loader->add_action( 'exm_show_reg_data', $plugin_admin, 'show_registrant_data');
+
+
 	}
 
 	/**
