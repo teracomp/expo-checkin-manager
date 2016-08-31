@@ -18,19 +18,47 @@
 
     <h2><?php echo esc_html(get_admin_page_title()); ?></h2>
  
- 	<h3>Main features:</h3>
-    <ol>
-    	<li>Export list from Gravity Forms registration form to Check-In ready CSV file</li>
-    	<li>Import lists from various external sources (CSV files)
-        	<ul>
-            	<li>Append these records to the appropriate registration form</li>
-                <li>Map columns from CSV to form fields</li>
-            </ul>
-        </li>
-        <li>Add/Edit Records</li>
-        <li>Generate predefined reports</li>
-        <li>Create custom reports</li>
-        <li>Configure on-site conference page</li>
-    </ol>
- </div>
- 
+ 	<h2 class="nav-tab-wrapper">
+		<a href="#expo-main" class="nav-tab nav-tab-active"><?php _e( 'Main', $this->plugin_name );?></a>
+		<a href="#export-reg" class="nav-tab"><?php _e( 'Export', $this->plugin_name );?></a>
+		<a href="#import-sheets" class="nav-tab"><?php _e( 'Import', $this->plugin_name );?></a>
+		<a href="#add-edit-records" class="nav-tab"><?php _e( 'Add/Edit', $this->plugin_name );?></a>
+		<a href="#expo-reports" class="nav-tab"><?php _e( 'Reports', $this->plugin_name );?></a>
+		<a href="#config-conf-page" class="nav-tab"><?php _e( 'Config Conf Page', $this->plugin_name );?></a>
+	</h2>
+ 	
+    <form method="post" name="expo_manager_options" action="options.php">
+		<?php
+            // /*
+            // * Grab all value if already set
+            // *
+            // */
+            $options = get_option($this->plugin_name);
+    
+            // panel name
+            $var1 = $options['var1'];
+            
+            /*
+            * Set up hidden fields
+            *
+            */
+            settings_fields($this->plugin_name);
+            do_settings_sections($this->plugin_name);
+    
+    
+             // Include tabs partials
+            require_once('expo-main_settings.php');				// #expo-main, Main
+            require_once('export-registrants_settings.php');		// #export-reg, Export			
+            require_once('import-sheets_settings.php');			// #import-sheets, Import			
+            require_once('add-edit-records_settings.php');		// #add-edit-records, Add/Edit			
+            require_once('expo-reports_settings.php');			// #reports, Reports
+            require_once('config-conf-page_settings.php');		// #config-conf-page, Config Conf Page
+        ?>
+
+        <p class="submit">
+            <?php submit_button(__('Save all changes', $this->plugin_name), 'primary','submit', TRUE); ?>
+        </p>
+        
+    </form>
+</div>
+
