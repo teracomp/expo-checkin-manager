@@ -11,7 +11,8 @@
  */
 ?>
 
-<div id="expo-main" class="wrap ecim-metaboxes">
+<!-- <div id="expo-main" class="wrap ecim-metaboxes"> -->
+<div id="expo-main" class="wrap">
 
 	<h2><?php esc_attr_e( 'Main Features', $this->plugin_name ); ?></h2>
 

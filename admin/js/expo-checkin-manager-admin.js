@@ -30,6 +30,7 @@
 	 */
 
 	$(function() {
+
 	 	// tabs
 		var $tabBoxes = $('.ecim-metaboxes'),
 			$tabLinkActive,
@@ -62,7 +63,8 @@
 				location.hash = $tabContent;
 			}
 		});
-		
+
+	
 	});
 
 })( jQuery );

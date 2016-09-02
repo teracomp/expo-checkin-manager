@@ -2,3 +2,12 @@
  * All of the CSS for your admin-specific functionality should be
  * included in this file.
  */
+ article {
+	 width: 640px;
+ }
+ .wide-text {
+	 width: 80%;
+ }
+ .check-done:before {
+   content:  "\2713 ";
+}

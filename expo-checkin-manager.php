@@ -48,7 +48,46 @@ function deactivate_expo_checkin_manager() {
 	Expo_Checkin_Manager_Deactivator::deactivate();
 }
 
+function my_plugin_create_db() {
+
+	global $wpdb;
+	$charset_collate = $wpdb->get_charset_collate();
+	$table_name = $wpdb->prefix . 'expo_checkin_tmp';
+	
+	$sql = "CREATE TABLE $table_name (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		gf_lead_id int(11) DEFAULT NULL,
+		seqnbr int(11) DEFAULT NULL,
+		group_name varchar(255) DEFAULT NULL,
+		group_total int(11) DEFAULT NULL,
+		regtype varchar(40) DEFAULT NULL,
+		firstname varchar(30) DEFAULT NULL,
+		lastname varchar(30) DEFAULT NULL,
+		email varchar(255) DEFAULT NULL,
+		address varchar(255) DEFAULT NULL,
+		city varchar(60) DEFAULT NULL,
+		state varchar(30) DEFAULT NULL,
+		zip varchar(20) DEFAULT NULL,
+		phone varchar(30) DEFAULT NULL,
+		precon varchar(60) DEFAULT NULL,
+		checkedin char(3) DEFAULT NULL,
+		notes text COLLATE utf8mb4_unicode_ci,
+		regreason varchar(40) DEFAULT NULL,
+		status varchar(16) DEFAULT NULL,
+		source varchar(40) DEFAULT NULL,
+		edited tinyint(4) DEFAULT NULL,
+		data_sync datetime DEFAULT NULL,
+		PRIMARY KEY  (id)
+	) $charset_collate;";
+
+	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	dbDelta( $sql );
+}
+
+
 register_activation_hook( __FILE__, 'activate_expo_checkin_manager' );
+register_activation_hook( __FILE__, 'my_plugin_create_db' );
+
 register_deactivation_hook( __FILE__, 'deactivate_expo_checkin_manager' );
 
 /**

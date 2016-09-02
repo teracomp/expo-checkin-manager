@@ -119,6 +119,12 @@ class Expo_Checkin_Manager {
 		 */
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-expo-checkin-manager-public.php';
 
+		/**
+		 * The class responsible for defining registrant structure.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'admin/class-registrant.php';
+
+
 		$this->loader = new Expo_Checkin_Manager_Loader();
 
 	}
@@ -158,8 +164,8 @@ class Expo_Checkin_Manager {
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_admin_menu' );
 
 		// Add Settings link to the plugin
-		$plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
-		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
+//		$plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
+//		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
 
 		// Save/Update our plugin options
 		$this->loader->add_action('admin_init', $plugin_admin, 'options_update'); // calls public function in class-[plugin-name]-admin.php
@@ -168,9 +174,14 @@ class Expo_Checkin_Manager {
 		
 		// when the button is clicked, do_action('exm_show_reg_data') fires class-expo-checkin-manager-admin=>'show_registrant_data'
 		$this->loader->add_action( 'exm_show_reg_data', $plugin_admin, 'show_registrant_data');
+		$this->loader->add_filter( 'exm_count_tmp_records', $plugin_admin, 'count_tmp_records' );		
 
 
+		// importing csv
+		$this->loader->add_action( 'wp_ajax_nopriv_submit_content', $plugin_admin, 'import_csv_processor' );
+		$this->loader->add_action( 'wp_ajax_submit_content', $plugin_admin, 'import_csv_processor' );
 	}
+
 
 	/**
 	 * Register all of the hooks related to the public-facing functionality

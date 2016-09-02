@@ -11,16 +11,23 @@
  */
 ?>
 
-<div id="expo-reports" class="wrap ecim-metaboxes hidden">
+<!-- <div id="expo-reports" class="wrap ecim-metaboxes hidden"> -->
+<div id="expo-reports" class="wrap">
 
-	<h2><?php esc_attr_e( 'Reports Page', $this->plugin_name ); ?></h2>
+	<h2><?php esc_attr_e( 'Reports', $this->plugin_name ); ?></h2>
 
     <ol>
-    	<li>Show list of predefined reports
+    	<li>Create list of predefined reports
         	<ul>
             	<li>Link to run report for display</li>
             </ul>
         </li>
-        <li>Interface for Adhoc Reports</li>
+        <li>Create Interface for Custom Reports
+        	<ol>
+            	<li>Create process to save custom reports</li>
+                <li>Create process to update custom reports</li>
+                <li>Create process to delete custom reports</li>
+            </ol>
+        </li>
     </ol>
  </div>
