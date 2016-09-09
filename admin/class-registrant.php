@@ -3,7 +3,9 @@
 // simple object to store needed data
 //
 class Registrant {
+	public $form_id;
 	public $gf_lead_id;
+	public $group_name;
 	public $seqnbr;
 	public $group_total;
 	public $firstname;
@@ -28,6 +30,9 @@ class Registrant {
 }
 
 class RegFieldNumbers {
+	public $group_name;
+	public $total_grp_regs;
+	public $total_ind_regs;
 	public $seqnbr;	
 	public $firstname; 
 	public $lastname;

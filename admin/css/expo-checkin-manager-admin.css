@@ -9,5 +9,17 @@
 	 width: 80%;
  }
  .check-done:before {
-   content:  "\2713 ";
+   content:  "\2705 ";  /** "\2713" **/
+   margin-right: .5em;
+}
+ .check-deleted:before {
+   content:  "\2716 ";
+   margin-right: .5em;
+}
+.check-deleted {
+	text-decoration:line-through;
+}
+.ecm-inline-button,
+.ecm-inline-button p.submit {
+	display: inline-block;
 }
