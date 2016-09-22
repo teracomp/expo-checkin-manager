@@ -36,15 +36,13 @@
             <h2><?php esc_attr_e( 'Main Features', $this->plugin_name ); ?></h2>
         
 		<article>
-			<h3>Key Features</h3>
             <ol>
                 <li>Import lists from various external sources (CSV files) to appropriate Registrants form
                 	<ol>
                     	<li><span class="check-done">Upload sheet to tmp database on-site</span></li>
                         <li><span class="check-done">Select destination form</span></li>
-                    	<li>Add New Registrants (gf_lead_id is NULL)</li>
+                    	<li><span class="check-done">Add New Registrants from import</span></li>
                         <li>Update Existing Registrants</li>
-                        <li>Append records as form entries</li>
                         <li>Map columns from CSV to form fields (will be in the 'Settings' submenu for this plugin)</li>
                     </ol>
                 </li>

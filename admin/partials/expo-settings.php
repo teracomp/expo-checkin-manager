@@ -34,90 +34,75 @@
             </ol>
         </li>
     </ol>
- </div>
 
- <?php
-$form_id = 16;
-$group_or_individual = 'Group Registrations';		// 114  radio button on the form
-$group_total = 10;  // 119
-$group_name = 'The Phillips Group';  // 152
-$regtype = 'Registrant';		// 199
-$source = 'Google Sheet';	// 201
-$payment_status = 'Paid';
-$payment_method = 'Offline';
-
-$newEntry = array(
-    'form_id' => $form_id,
-    'payment_status' => $payment_status,
-    'payment_method' => $payment_method,
-	'152' => $group_name,
-	'199' => $regtype,
-	'201' => $source,
-	'119' => $group_total,
-	'114' => $group_or_individual,
-    '20' => 'Dave',
-    '22' => 'Phillips',
-    '26' => '1301 Leeward Rd',
-    '27' => 'Anderson',
-    '36' => 'South Carolina',
-    '28' => '29625',
-    '6' => 'davep@newlife4me.org',
-    '7' => '(111) 222-3333',
-    '11' => 'From Addition to Multiplication',
-    '41' => 'Curtis',
-    '42' => 'Hunnicutt',
-    '43' => 'chunnicutt74@gmail.com',
-    '46' => 'Church Planting',
-    '48' => 'Rick',
-    '49' => 'Schaffner',
-    '50' => 'rick@inewlife.org',
-    '51' => 'Church Planting',
-    '53' => 'Chad',
-    '54' => 'Wiggins',
-    '55' => 'chad@inewlife.org',
-    '56' => 'Church Planting',
-    '57' => 'Josh',
-    '58' => 'Hilson',
-    '59' => 'josh@inewlife.org',
-    '60' => 'Church Planting',
-    '63' => 'Tyler',
-    '64' => 'Gagnon',
-    '65' => 'tylergagnon654@gmail.com',
-    '66' => 'None',
-    '68' => 'Jordan',
-    '69' => 'Ryskamp',
-    '70' => 'jordan@inewlife.org',
-    '71' => 'None',
-    '73' => 'Willie',
-    '74' => 'Titus',
-    '75' => 'willie.titus@yahoo.com',
-    '76' => 'Church Planting',
-    '78' => 'Roberto',
-    '79' => 'Hinds',
-    '80' => 'Hindsight8@me.com',
-    '81' => 'Church Planting',
-    '83' => 'Hanna',
-    '84' => 'Oberlin',
-    '85' => 'hannah@wejourney.church',
-    '86' => 'None',
-);
-echo '<pre>';
-print_r( $newEntry );
-echo '</pre>';
-
-$lid = GFAPI::add_entry( $newEntry );
-echo '<h4>Added entry: '.$lid.'</h4>';
-
-$link = get_site_url().'/wp-admin/admin.php?page=gf_entries&view=entry&id='.$form_id.'&lid='.$lid;
-echo '<p>Link: '.$link.'</p>';
-echo '<p>Click here to see the entry: <a href="'.$link.'">Link to Entry</a>';
-
-$entry = GFAPI::get_entry( $lid );
-echo '<pre>';
-print_r( $entry );
-echo '</pre>';
-
-
-
+<?php
+ 
+	// get options
+	$options = get_option($this->plugin_name);
+	
+	// get list of valid gravity forms
+	$gfList = apply_filters( 'exm_get_gf_forms_list' );
 
 ?>
+    <form method="post" name="expo_manager_options" action="<?php echo admin_url( 'admin-ajax.php' ) ?>">
+		<?php 
+			settings_fields($this->plugin_name); 
+		?>
+        
+		<fieldset>
+        	<h4>Select Form:</h4>
+            <ul>
+            <?php
+                foreach( $gfList as $key=>$value ) {
+            ?>            
+                <li>
+                    <label for="<?php echo $this->plugin_name; ?>-import-to-form-<?php echo $key?>">
+                        <input class="gflist" type="radio" <?php checked( $options['import_to_form'], $key ); ?>
+                        	id="<?php echo $this->plugin_name; ?>-import-to-form-<?php echo $key?>" 
+                        	name="<?php echo $this->plugin_name; ?>[import_to_form]" value="<?php echo $key ?>">
+                        &nbsp;<?php echo $value; ?>
+                    </label>
+                </li>
+            <?php
+                }
+            ?>
+            </ul>        
+        </fieldset>
+	</form>
+<?php
+global $wpdb;
+		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
+		$sql = "SELECT * FROM $dbtable WHERE id = 733";
+		$ans = $wpdb->get_results( $sql );
+		$tmpdb = $ans[0];
+
+			$newEntry = array(
+				$this->get_field_number('group_name')    => $tmpdb->group_name,
+				$this->get_field_number('regtype')       => $tmpdb->regtype,
+				$this->get_field_number('source')        => $tmpdb->source,
+				$this->get_field_number('regreason')     => $tmpdb->regreason,
+				$this->get_field_number('reg1firstname') => $tmpdb->firstname,
+				$this->get_field_number('reg1lastname')  => $tmpdb->lastname,
+				$this->get_field_number('reg1email')     => $tmpdb->email,
+				$this->get_field_number('reg1address')   => $tmpdb->address,
+				$this->get_field_number('reg1city')      => $tmpdb->city,
+				$this->get_field_number('reg1state')     => $tmpdb->state,
+				$this->get_field_number('reg1zip')       => $tmpdb->zip,
+				$this->get_field_number('reg1phone')     => $tmpdb->phone,
+				$this->get_field_number('reg1precon')    => $tmpdb->precon,
+				$this->get_field_number('reg1checkedin') => $tmpdb->checkedin,
+				$this->get_field_number('reg1notes')     => $tmpdb->notes,
+				$this->get_field_number('reg2firstname') => $tmpdb->spouse_firstname,
+				$this->get_field_number('reg2lastname')  => $tmpdb->spouse_lastname,
+				$this->get_field_number('reg2email')     => $tmpdb->spouse_email,
+				$this->get_field_number('reg2precon')    => $tmpdb->spouse_precon
+			);        
+ 		echo '<pre>';
+		print_r( $newEntry );
+		echo '</pre>';
+ 
+ ?>
+<div id="dbTableColumns"></div>
+<div id="fieldList"></div> 
+
+</div> <!-- .wrap -->

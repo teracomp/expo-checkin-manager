@@ -172,21 +172,20 @@ class Expo_Checkin_Manager {
 		
 //        $this->loader->add_action( 'login_enqueue_scripts', $plugin_admin, 'wp_cbf_login_css' );
 		
-		// when the button is clicked, do_action('exm_show_reg_data') fires class-expo-checkin-manager-admin=>'show_registrant_data'
-		$this->loader->add_action( 'exm_show_reg_data', $plugin_admin, 'show_registrant_data');
+		$this->loader->add_action( 'exm_export_entries', $plugin_admin, 'export_entries');
+		$this->loader->add_action( 'exm_create_entries_from_db', $plugin_admin, 'create_entries_from_db');
+		
 		$this->loader->add_filter( 'exm_count_tmp_records', $plugin_admin, 'count_tmp_records' );
 		
 		$this->loader->add_filter( 'exm_get_gf_forms_list', $plugin_admin, 'get_gf_forms_list' );
 
 
 		// importing csv
-		$this->loader->add_action( 'wp_ajax_nopriv_submit_content', $plugin_admin, 'import_csv_processor' );
 		$this->loader->add_action( 'wp_ajax_submit_content', $plugin_admin, 'import_csv_processor' );
-		
-		// testing code...but the concept is valid when handling search callbacks
-		$this->loader->add_action( 'wp_ajax_nopriv_post_type_search_callback', $plugin_admin, 'post_type_search_callback' );
-		$this->loader->add_action( 'wp_ajax_post_type_search_callback', $plugin_admin, 'post_type_search_callback' );
-		
+			
+		$this->loader->add_action( 'wp_ajax_get_form_fields', $plugin_admin, 'get_form_fields_callback' );
+		$this->loader->add_action( 'wp_ajax_get_dbtable_columns', $plugin_admin, 'get_dbtable_columns_callback' );
+
 	}
 
 

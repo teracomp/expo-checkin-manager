@@ -41,6 +41,20 @@ class Expo_Checkin_Manager_Admin {
 	private $version;
 
 	/**
+	 * The options for this plugin.
+	 *
+	 * @since    1.0.0
+	 * @access   private
+	 * @var      array    $eci_options   Options for this plugin.
+	 */
+	private $eci_options;
+
+	/**
+	 * current Gravity Form in use
+	 */
+	private $cform;
+
+	/**
 	 * Initialize the class and set its properties.
 	 *
 	 * @since    1.0.0
@@ -51,7 +65,8 @@ class Expo_Checkin_Manager_Admin {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
-		$this->expo_checkin_options = get_option($this->plugin_name);	// todo: handle options
+		$this->eci_options = get_option($this->plugin_name);	// todo: handle options
+		$this->set_current_form();
 	}
 
 	/**
@@ -220,25 +235,26 @@ class Expo_Checkin_Manager_Admin {
 			 $valid['import_to_form'] = $options['import_to_form'];
 		}
 		
+		if ( $input['last_export_entry_id'] ) {
+			 $valid['last_export_entry_id'] = $input['last_export_entry_id'];
+		} else {
+			 $valid['last_export_entry_id'] = $options['last_export_entry_id'];
+		}
+
+		if ( isset($input['import_one_group']) ) {
+			if ( $input['import_one_group'] ) {
+				$valid['import_one_group'] =  'on' ;
+			} else {
+				$valid['import_one_group'] =  'off' ;
+			}
+		} else {
+				$valid['import_one_group'] =  'off' ;
+		}
+	
+		
 		return $valid; 
 	}
 	
-	// test method for handling a callback
-	public function post_type_search_callback() {
-		global $wpdb;
-		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
-		$sql = "SELECT firstname FROM $dbtable WHERE id=1";
-		$suc = $wpdb->get_var( $sql );
-
-		$data= $_POST['variable'];
-
-		$output= 'i was returned with ajax. d: '.$data;
-	
-		//need to echo output and exit here
-		echo $output;
-		exit();
-	}	
-
 	public function get_reg_count( $entries ) {
 		$regs = 0;
 		foreach( $entries as $e ) {
@@ -247,65 +263,107 @@ class Expo_Checkin_Manager_Admin {
 		return $regs;
 	}
 	
+	public function get_form_fields_callback() {
+		$form_id = $_REQUEST['form_id'];
+		$label = $_REQUEST['text'];
+		
+		if ( $label === '' ) {
+			$label = 'Form Fields';
+		}
+
+		$options = get_option( $this->plugin_name );
+		if ( $form_id === '0' ) {	
+			$form_id = $options['import_to_form'];
+		} else {
+			$options['import_to_form'] = $form_id;
+		    update_option($this->plugin_name, $options);
+		}
+		
+		$this->set_current_form( $form_id );
+
+//		$form = GFAPI::get_form( $form_id );
+		
+		$fieldList = '<h3>'.$label.' (form_id: '.$form_id.')</h3>';
+		$fieldList .= '<ul>';
+			foreach ( $this->cform['fields'] as $fld ) {
+				if ( $fld['adminLabel'] <> '' ) {
+					$lbl = $fld['adminLabel'];
+				} else {
+					$lbl = $fld['label'];					
+				}				
+				$fieldList .= '<li>' . $fld['id']. ': '.$lbl.'</li>';	 
+			}
+		$fieldList .= '</ul>';
+
+		echo $fieldList;
+
+		wp_die();	// required by ajax
+	}
+
+	public function get_dbtable_columns_callback() {
+		global $wpdb;
+		$tbl = $_REQUEST['tablename'];
+		// our temp database table	
+		$dbtable = $wpdb->prefix . $tbl;
+
+		$dbColumns = '<h3>Columns for db table: '.$tbl.'</h3>';
+		$dbColumns .= '<ul>';
+			foreach ( $wpdb->get_col( "DESC " . $dbtable, 0 ) as $column_name ) {
+				$dbColumns .= '<li>' . $column_name.'</li>';	 
+			}
+		$dbColumns .= '</ul>';
+
+		echo $dbColumns;
+
+		wp_die();	// required by ajax
+	}
+
+	public function set_current_form( $form_id = 0 ){
+		if ( $form_id === 0 ) {
+			$options = get_option( $this->plugin_name );	
+			if ( $options['import_to_form'] ) {
+				$form_id = $options['import_to_form'];
+			}
+		}
+		$this->cform = GFAPI::get_form( $form_id );
+		return true;
+	}
+	
+	public function get_field_number( $label ) {
+		$nbr = 0;
+		foreach( $this->cform['fields'] as $fld ) {
+			if ( $fld['adminLabel'] === $label ) {
+				$nbr = $fld['id'];
+				break;
+			} elseif ( $fld['label'] === $label ) {
+				$nbr = $fld['id'];
+				break;
+			}
+		}
+		return $nbr;	
+	}
+
+	
 	public function get_gf_forms_list() {
 
 		$ans = array();
-		$forms = GFAPI::get_forms();
-		foreach ( $forms as $frm ) { 	
-			// only want active forms that are not in the trash
-			if ( $frm['is_trash'] === '0' && $frm['is_active'] === '1' ) {
-				$search_criteria = array( 'status' => 'active' );
-				$search_criteria['field_filters'][] = array("key" => 'payment_status', value => 'Paid');
-				$total_entries = GFAPI::count_entries( $frm['id'], $search_criteria );
-				if ( $total_entries > 0 ) {
-//					$search_criteria['field_filters'][] = array('payment_status' => 'paid');
-					$search_criteria['field_filters'][] = array("key" => 'payment_status', value => 'Paid');
-					$paging = array( 'offset' => 0, 'page_size' => 200 );
-					$entries = GFAPI::get_entries( $frm['id'], $search_criteria, null, $paging );
-					$total_registrants = $this->get_reg_count( $entries );
-					if ( $total_registrants > 0 ) {
-						$ans[ $frm['id'] ] = $frm['title'] . ' | ' . $total_entries.' entries | '.$total_registrants. ' registrants)';	// build a key=>value array
-					}
-				}
-			}
+		$forms = GFAPI::get_forms();   // get_forms() returns active forms
+	
+		foreach ( $forms as $frm ) { 			
+			$search_criteria = array( 'status' => 'active' );
+			$search_criteria['field_filters'][] = array("key" => 'payment_status', value => 'Paid');
+			$total_entries = GFAPI::count_entries( $frm['id'], $search_criteria );
+			$total_registrants = 0;
+			$ans[ $frm['id'] ] = $frm['title'] . ' | ' . $total_entries.' entries | '.$total_registrants. ' registrants)';	// build a key=>value array
 		}
-
-//		$aform = GFAPI::get_form(16);
-//		echo '<h3>DC Form Fields (filtered)</h3>';
-//		echo '<ul>';
-//		foreach( $aform['fields'] as $fld ){
-//			if ( ( $fld['label'] <> '' || $fld['adminlabel'] <> '' ) && $fld['type'] <> 'html' ) {
-//				$row = '<li>id: '.$fld['id'].'<ol><li>type: '.$fld['type'].'</li>';
-//				if ( $fld['adminLabel'] <> '' ) {
-//					$row .= '<li>adminLabel: ' . $fld['adminLabel'] . '</li>';
-//				} else {
-//					$row .= '<li>label: '.$fld['label'].'</li>';
-//				}
-//				$row .= '</li></ol></li>';
-//				echo $row;
-//			}
-//		}
-//		echo '</ul>';
-
-// $entry = GFAPI::get_entry( 525 );
-// echo '<pre>';
-// print_r( $entry );
-// echo '</pre>';
-
-// 	$entry_id = '525'; 
-// 	$entry = GFAPI::get_entry( $entry_id ); 
-// 	$entry['60'] = 'Church Planting|39'; 
-// 	$result = GFAPI::update_entry( $entry ); 
-// echo '<pre>';
-// print_r( $entry );
-// echo '</pre>';
-
-
 		return $ans;
 	}
 
 	public function import_csv_processor() {
 		global $wpdb;
+
+		// our temp database table	
+		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
 
 		$filename = $_FILES['csv_import_file']['name'];		
 
@@ -320,18 +378,24 @@ class Expo_Checkin_Manager_Admin {
 			$header_rows_count = intval( $theOptions['header_rows_count'] );
 		} else {
 			$header_rows_count = 1;
-		}
-
+		}	
+		
 		$csv_content = file_get_contents(  $_FILES['csv_import_file']['tmp_name'] );		// i have to use this method to detect the \n or \r (crazy)
 		$csv_with_tabs = preg_replace("/[\n\r]/","\t",$csv_content);		// convert the \n or \r to \t
 
 		$all_data = array();
 		$registrants = array();
 		$rows = split( "\t", $csv_with_tabs );		// convert these as rows 
+		
+		// now we have to look for " marks
+		$delimiter = ",";
+		$enclosure = '"';
 		foreach( $rows as $row) {
-			$all_data[] = split(",", $row);			// build all the data
-		}
+			$all_data[] = str_getcsv( $row, $delimiter, $enclosure );
+//			$all_data[] = split(",", $row);			// build all the data
 
+		}
+	
 		$hdr_offset = $header_rows_count - 1;
 		if ( $hdr_offset < 0 ) {
 			$hdr_offset = 0;
@@ -343,8 +407,6 @@ class Expo_Checkin_Manager_Admin {
 		
 		$form_id = $import_to_form;
 
-		// our temp database table	
-		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
 		$curruserid = wp_get_current_user()->id;	
 		$delwhere = array( 'userid'=>$curruserid );
 		$del_response = $wpdb->delete( $dbtable, $delwhere );
@@ -376,7 +438,7 @@ class Expo_Checkin_Manager_Admin {
 			$data['checkedin'] = ( $data['checkedin'] <> '' ) ? $data['checkedin'] : 'No';			
 			$data['userid'] = $curruserid;
 			$data['form_id'] = $form_id;
-			$data['source'] = $filename.': '.$data['source'];
+			$data['source'] = ( $data['source'] <> '' ) ? $filename.': '.$data['source'] : $filename;
 			
 			// only insert records that have a first and last name. otherwise, this is a blank row for some reason
 			if ( $data['firstname'] <> '' && $data['lastname'] <> '' ) {
@@ -414,26 +476,91 @@ class Expo_Checkin_Manager_Admin {
 		// our temp database table
 		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
 		$curruserid = wp_get_current_user()->id;
-		$form_id = 16;
+		$options = get_option( $this->plugin_name );
+		$form_id = $options['import_to_form']; //16;
 
 		$sql = "SELECT count(*) FROM $dbtable WHERE userid=$curruserid AND form_id=$form_id";
 //		echo 'sql: ' . $sql;
 		$v = $wpdb->get_var( $sql );
-		// echo '<h4>Answer: '.$v.'</h4>';
+//		echo '<h4>Answer: '.$v.'</h4>';
 		return $v;
 	}
 	
-	public function show_registrant_data() {
+	public function create_entries_from_db() {
 		global $wpdb;
+		date_default_timezone_set('America/New_York');
+
+		$options = get_option( $this->plugin_name );
+		$form_id = $options['import_to_form']; //16;
+
+		$regreason = 'Imported';		// 114  radio button on the form		
+		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
 		
-		$form_id = 16;
+		$sql = "SELECT * FROM $dbtable WHERE data_sync IS NULL";
+		$ans = $wpdb->get_results( $sql );
+		$cnt_to_add = count($ans);
+		$cnt_entries_added = 0;
+
+		
+		// live database	
+		foreach ( $ans as $tmpdb ) {
+			$currdatetime = date('Y/m/d H:i:s', time());
+			$newEntry = array(
+				'form_id' => $tmpdb->form_id,
+				'payment_status' => $tmpdb->payment_status,
+				'payment_method' => 'Offline',
+				'149' => $tmpdb->group_name,
+				'150' => $tmpdb->regtype,
+				'152' => $tmpdb->source . ' at ' .$currdatetime,
+				'151' => $regreason,
+				'153' => $tmpdb->notes,
+				'20' => $tmpdb->firstname,
+				'22' => $tmpdb->lastname,
+				'26' => $tmpdb->address,
+				'27' => $tmpdb->city,
+				'36' => $tmpdb->state,
+				'28' => $tmpdb->zip,
+				'6' => $tmpdb->email,
+				'7' => $tmpdb->phone,
+				'11' => $tmpdb->precon,
+				'41' => $tmpdb->spouse_firstname,
+				'42' => $tmpdb->spouse_lastname,
+				'43' => $tmpdb->spouse_email,
+				'46' => $tmpdb->spouse_precon,
+				'153' => $tmpdb->notes,
+			);
+			$lid = GFAPI::add_entry( $newEntry );
+			if ( $lid > 0 ) {
+				$data = array( 'data_sync'=> $currdatetime );
+				$where = array( 'id' => $tmpdb->id );
+				$response = $wpdb->update( $dbtable, $data, $where );
+				$cnt_entries_added++;
+			}
+		}
+
+		echo '<h3>Found: '.$cnt_to_add .'</h3>';
+		echo '<h3>Added: '.$cnt_entries_added.'</h3>';
+
+	}
+
+	public function export_entries() {
+		global $wpdb;
+		// get the entry id from the last import. export only the new records
+		$options = get_option( $this->plugin_name );
+		$form_id = $options['import_to_form']; //16;
+
 		$expo_dc_form_lead_ids = '19, 119';
 		$payment_status = 'Paid';
 		$entry_status = 'active';
 
         $options = get_option($this->plugin_name);
         $csv_filename = $options['csv_filename'];
-		
+		if ( $options['last_export_entry_id'] ) {
+			$last_export_entry_id = $options['last_export_entry_id'];
+		} else {
+			$last_export_entry_id = 0;			
+		}
+
 		$rg_lead        = $wpdb->prefix . 'rg_lead';
 		$rg_lead_detail = $wpdb->prefix . 'rg_lead_detail';
 
@@ -449,10 +576,13 @@ class Expo_Checkin_Manager_Admin {
 		/**
 		 * these are the lead registrants -- process these and look for their team members
 		 **/
-		$sql = "SELECT a.id lead_id,
+		$sql = "SELECT a.id lead_id, payment_status, payment_method, 
 			(SELECT d.value FROM $rg_lead_detail d WHERE d.lead_id=a.id AND field_number IN ($expo_dc_form_lead_ids)) cnt 
 			FROM `$rg_lead` a 
-			WHERE a.form_id=$form_id AND a.payment_status='$payment_status' AND a.status='$entry_status'";
+			WHERE a.form_id=$form_id AND a.status='$entry_status' AND a.payment_status IS NOT NULL
+			AND a.id > $last_export_entry_id";
+
+//			WHERE a.form_id=$form_id AND a.payment_status='$payment_status' AND a.status='$entry_status'";
 		
 //		echo '<h4>SQL Leads</h4>';
 //		echo $sql;
@@ -468,7 +598,11 @@ class Expo_Checkin_Manager_Admin {
 			$arRegFieldNumbers[10] = array();
 			
 			// primary registrant fields: (20,22,6,26,27,36,28,7,11,132,142)
+
 			$rreg = new RegFieldNumbers();
+			$rreg->regtype      = 199;
+			$rreg->regreason    = 200;
+			$rreg->source       = 201;
 			$rreg->seqnbr       = 1;
 			$rreg->group_name	= 152;
 			$rreg->total_ind_regs = 19;
@@ -632,6 +766,9 @@ class Expo_Checkin_Manager_Admin {
 
 			$ar = array();
 			
+		// get new entries for the current form
+//		$newEntries = GFAPI::get_entries( $this->cform['id'], $search_criteria );
+			
 			foreach ( $lead_registrants as $row ) {
 				$cnt = intval($row->cnt);
 				$lead_id = $row->lead_id;
@@ -643,13 +780,18 @@ class Expo_Checkin_Manager_Admin {
 				
 				// add the lead to the array
 				$reg = new Registrant( $lead_id );
-				$reg->gf_lead_id 	= $lead_id;
-				$reg->group_name    = $group_name;
-				$reg->form_id		= $form_id;
-				$reg->seqnbr 		= 1;
-				$reg->group_total 	= $cnt;
+				$reg->gf_lead_id     = $lead_id;
+				$reg->payment_status = $row->payment_status; // direct from the query
+				$reg->payment_method = $row->payment_method;
+				$reg->group_name     = $group_name;
+				$reg->form_id        = $form_id;
+				$reg->seqnbr         = 1;
+				$reg->group_total    = $cnt;
+				$reg->regtype        = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->regtype );
+				$reg->regreason      = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->regreason );
+				$reg->source         = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->source );
 
-				if ( $cnt > 1 ) {		// handle registrations for multiple people -- more than one on this entry
+				if ( $cnt > 1 ) {		// handle online registrations for multiple people -- more than one on this entry
 					$reg->regtype 	= 'Group Lead';
 					if ( $reg->group_name === '' ) {	// most likely blank, but making sure before resetting it
 						$group_name = 
@@ -657,12 +799,17 @@ class Expo_Checkin_Manager_Admin {
 							$this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->lastname  );
 						$reg->group_name = $group_name;
 					}
-				} elseif ( $group_name <> '' ) {	// in this case the registrant is part of a group
-					$reg->regtype = 'Group Member';
-				} else {							// otherwise, this is an individual registration
-					$reg->regtype 	= 'Individual';
-					$reg->group_name = '';
+				}  elseif ( $group_name === '' ) {
+					$reg->regtype = 'Registrant';
 				}
+//				elseif ( $group_name <> '' ) {	// in this case the registrant is part of a group
+//					if ( $reg->regtype <> 'Speaker' || $reg->regtype <> 'Sponsor' ) {
+//						$reg->regtype = 'Group Member';
+//					}
+//				} else {							// otherwise, this is an individual registration
+//					$reg->regtype 	= 'Individual';
+//					$reg->group_name = '';
+//				}
 				
 				$reg->firstname   = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->firstname, 'TBD' );
 				$reg->lastname    = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->lastname, 'TBD' );
@@ -675,8 +822,8 @@ class Expo_Checkin_Manager_Admin {
 				$reg->precon      = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->precon );
 				$reg->checkedin   = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->checkedin, 'No' );
 				$reg->notes       = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->notes );
-				$reg->paid        = 'Paid';
-				$reg->datasource  = 'Wordpress';
+				$reg->paid        = $row->payment_status;
+				$reg->datasource  = $reg->source;
 				$ar[] = $reg;
 				$total_registrants++;
 
@@ -701,8 +848,8 @@ class Expo_Checkin_Manager_Admin {
 						$reg->precon 		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->precon );
 						$reg->checkedin		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->checkedin, 'No' );
 						$reg->notes			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->notes );
-						$reg->paid			= 'Paid';
-						$reg->datasource	= 'Wordpress';
+						$reg->paid          = $row->payment_status;
+						$reg->datasource    = $reg->source;
 						$ar[] = $reg;
 						$total_registrants++;
 					}
@@ -721,13 +868,13 @@ class Expo_Checkin_Manager_Admin {
 //		echo '<h3>File URL: ' . $public_file. '</h3>';
 
 		$out = fopen( $outfile, "a" ); 
-
-			fputcsv( $out, $arFieldLabels);
-			foreach( $ar as $a ) {
-				$arfields = array( $a->form_id, $a->gf_lead_id, $a->seqnbr, $a->group_name, $a->group_total, $a->regtype, $a->firstname, $a->lastname, 
-					$a->email, $a->address, $a->city, $a->state, $a->zip, $a->phone, $a->precon, $a->checkedin, $a->notes, $a->paid, $a->datasource );
-				fputcsv($out, $arfields, $delimiter = ",", $enclosure = '"');
-			}
+		fputcsv( $out, $arFieldLabels);
+		foreach( $ar as $a ) {
+			$arfields = array( $a->form_id, $a->gf_lead_id, $a->seqnbr, $a->group_name, $a->group_total, $a->regtype, $a->firstname, $a->lastname, 
+				$a->email, $a->address, $a->city, $a->state, $a->zip, $a->phone, $a->precon, $a->checkedin, $a->notes, $a->paid, $a->datasource );
+			fputcsv($out, $arfields, $delimiter = ",", $enclosure = '"');
+			$last_export_entry_id = $a->gf_lead_id;
+		}
 		
 		fclose($out);
 
@@ -735,6 +882,11 @@ class Expo_Checkin_Manager_Admin {
 		$data = '<h2>Lead Registrants: '.$total_lead_registrants.'</h2>';
 		$data .= '<h2>All Registrants: '.$total_registrants.'</h2>';
 		$data .= '<h3>'.$csvlink.'</h3>';
+		$data .= '<h3>Last Export Entry ID: ' . $last_export_entry_id.'</h3>';
+		
+		$options['last_export_entry_id'] = $last_export_entry_id;
+	    update_option($this->plugin_name, $options);
+
 
 //		$data .= '<ol>';
 //		foreach( $ar as $reg ) {

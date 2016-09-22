@@ -1,3 +1,4 @@
+/*global ajaxurl */
 (function( $ ) {
 	'use strict';
 
@@ -65,79 +66,49 @@
 				location.hash = $tabContent;
 			}
 		});
-		
-		$('#button1').click( function(e) {
-			e.preventDefault();
-			console.log('inside click');
-			// importFile = $('input[type=file]').val(),
-			var 	input = $('#csv_import_file'),
-				file,
-				fr,
-				importFileContents;
-			if ( !input.files ) {
-				file = 'unknown file...something broke.';
-			} else {
-				file = input.files[0];
-				fr = new FileReader();
-//				fr.onload = receivedText;
-				fr.readAsText(file);
-				importFileContents = fr.result;
-			}
 			
-			$.ajax({
-				type: "POST",
-				url: ajax_url,
-				data: {
-					action: 'post_type_search_callback',
-					variable: 'file: ' + file + ' contents:' + importFileContents
-				},
-				success: function( output ) {
-					console.log('success: ' + output );
-				}
-				
-			});
-		});
-
-		$('#chkbox1').click( function(e) {
+		
+		$('.gflist').change( function(e) {
 			e.preventDefault();
-			console.log('checkbox1');
-			$.ajax({
-				type: "POST",
-				url: "/gf/wp-admin/admin-ajax.php",
-				data: {
-					action: 'chkbox1_callback',
-					variable: 'chkbox1' // $_POST['variable']
-				},
-				success: function( output ) {
-					console.log('success: ' + output );
+			var myLabel = $.trim( $("label[for='"+e.srcElement.id+"']").text() );
+			$.post( ajaxurl, 
+				{	
+					'action' : 'get_form_fields', 
+					'form_id'  : e.srcElement.value,
+					'text'   : myLabel
+				}, 
+				function( fieldList ) {
+					$('#fieldList').html( fieldList );
+					console.log('show fields for ' + myLabel);
 				}
-				
-			});
+			);			
 		});
+		
+		// test to see if the page I want is loaded
+		if ( $('#expo-settings').length > 0 ) {
+			$.post( ajaxurl, 
+				{	
+					'action' : 'get_form_fields', 
+					'form_id' : 0,
+					'text'    : ''
+				}, 
+				function( fieldList ) {
+					$('#fieldList').html( fieldList );
+					console.log('show curr form fields');				
+				}
+			);
+			
+			$.post( ajaxurl, 
+				{ 
+					'action' : 'get_dbtable_columns',
+					'tablename' :  'expo_checkin_tmp'
+				},
+				function( columnList ) {
+					$('#dbTableColumns').html( columnList );
+					console.log('show tmp db columns');
+			});
+		}
 	
 	});
 
 })( jQuery );
-/*
-
-jQuery(document).ready(function() { // wait for page to finish loading 
-	'use strict';
-   jQuery("#button1").click(function () {
-	   
-console.log('clicked!');
-    jQuery.ajax({
-        type: "POST",
-        url: "/wp-admin/admin-ajax.php",
-        data: {
-            action: 'post_type_search_callback',
-            variable: 45 // enter in anyname here instead of variable, you will need to catch this value using $_POST['variable'] in your php function.
-        },
-        success: function (output) {
-           console.log(output);
-        }
-    });
-
-  });
-});
-
-*/

@@ -55,7 +55,7 @@ function my_plugin_create_db() {
 	$table_name = $wpdb->prefix . 'expo_checkin_tmp';
 	
 	$sql = "CREATE TABLE $table_name (
-		id int(11) NOT NULL AUTO_INCREMENT,
+		id int(11) NOT NULL,
 		userid int(11) DEFAULT NULL,
 		form_id int(11) DEFAULT NULL,
 		gf_lead_id int(11) DEFAULT NULL,
@@ -74,7 +74,11 @@ function my_plugin_create_db() {
 		state varchar(30) DEFAULT NULL,
 		zip varchar(20) DEFAULT NULL,
 		phone varchar(30) DEFAULT NULL,
-		precon varchar(60) DEFAULT NULL,
+		precon varchar(255) DEFAULT NULL,
+		spouse_firstname varchar(60) DEFAULT NULL,
+		spouse_lastname varchar(60) DEFAULT NULL,
+		spouse_email varchar(255) DEFAULT NULL,
+		spouse_precon varchar(255) DEFAULT NULL,
 		checkedin char(3) DEFAULT NULL,
 		notes text,
 		edited tinyint(4) DEFAULT NULL,
