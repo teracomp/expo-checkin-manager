@@ -136,25 +136,11 @@ class Expo_Checkin_Manager_Admin {
 		add_submenu_page($this->plugin_name, 'Add/Edit Regs', 'Add/Edit Regs', 'manage_options', $this->plugin_name.'-addedit', array($this, 'display_plugin_addedit_page'));
 		add_submenu_page($this->plugin_name, 'Reports', 'Reports', 'manage_options', $this->plugin_name.'-reports', array($this, 'display_plugin_reports_page'));
 		add_submenu_page($this->plugin_name, 'Conf Config', 'Conf Config', 'manage_options', $this->plugin_name.'-config', array($this, 'display_plugin_config_page'));
-		add_submenu_page($this->plugin_name, 'Settings', 'Settings', 'manage_options', $this->plugin_name.'-settings', array($this, 'display_plugin_settings_page'));
+//		add_submenu_page($this->plugin_name, 'Settings', 'Settings', 'manage_options', $this->plugin_name.'-settings', array($this, 'display_plugin_settings_page'));
 
 
 	}
 	
-	/**
-	 * Add settings action link to the plugins page.
-	 * @since    1.0.0
-	 */ 
-//	public function add_action_links( $links ) {
-//		/*
-//		*  Documentation : https://codex.wordpress.org/Plugin_API/Filter_Reference/plugin_action_links_(plugin_file_name)
-//		*/
-//	   $settings_link = array( '<a href="' . admin_url( 'options-general.php?page=' . $this->plugin_name ) . '">' . __('Settings', $this->plugin_name) . '</a>' );
-//
-//	   return array_merge(  $settings_link, $links );
-//	
-//	}
-//	
 	/**
 	 * Render the settings page for this plugin.
 	 *
@@ -263,6 +249,7 @@ class Expo_Checkin_Manager_Admin {
 		return $regs;
 	}
 	
+	
 	public function get_form_fields_callback() {
 		$form_id = $_REQUEST['form_id'];
 		$label = $_REQUEST['text'];
@@ -318,6 +305,21 @@ class Expo_Checkin_Manager_Admin {
 		wp_die();	// required by ajax
 	}
 
+	// ajax call to set the current form
+	// updates the options table, then calls the local set_current_form method
+	public function set_curr_form_callback() {
+		if ( isset( $_REQUEST['form_id'] ) ){
+			$form_id = $_REQUEST['form_id'];
+			$options = get_option( $this->plugin_name );
+			$options['import_to_form'] = $form_id;
+			update_option( $this->plugin_name, $options );
+			$this->set_current_form( $form_id );
+		}
+		echo 'set curr form id: ' . $form_id;
+		wp_die();	// required by ajax
+	}
+	
+	// set the form for this instance
 	public function set_current_form( $form_id = 0 ){
 		if ( $form_id === 0 ) {
 			$options = get_option( $this->plugin_name );	
@@ -329,6 +331,7 @@ class Expo_Checkin_Manager_Admin {
 		return true;
 	}
 	
+	// powerful method that gets the appropriate field id based on the label provided
 	public function get_field_number( $label ) {
 		$nbr = 0;
 		foreach( $this->cform['fields'] as $fld ) {
@@ -343,7 +346,7 @@ class Expo_Checkin_Manager_Admin {
 		return $nbr;	
 	}
 
-	
+	// create a list of Gravity Forms installed on this system
 	public function get_gf_forms_list() {
 
 		$ans = array();
@@ -359,6 +362,10 @@ class Expo_Checkin_Manager_Admin {
 		return $ans;
 	}
 
+	// very specific csv importer
+	// expects appropriate column names that will match the tmp database table
+	// once the file is parsed into the database, calls the method to create entries
+	// the tmp db table is probably not required, but it makes it easy to troubleshoot
 	public function import_csv_processor() {
 		global $wpdb;
 
@@ -392,8 +399,6 @@ class Expo_Checkin_Manager_Admin {
 		$enclosure = '"';
 		foreach( $rows as $row) {
 			$all_data[] = str_getcsv( $row, $delimiter, $enclosure );
-//			$all_data[] = split(",", $row);			// build all the data
-
 		}
 	
 		$hdr_offset = $header_rows_count - 1;
@@ -409,9 +414,7 @@ class Expo_Checkin_Manager_Admin {
 
 		$curruserid = wp_get_current_user()->id;	
 		$delwhere = array( 'userid'=>$curruserid );
-		$del_response = $wpdb->delete( $dbtable, $delwhere );
-	
-	
+		$del_response = $wpdb->delete( $dbtable, $delwhere );	
 	
 		// array of fields
 		$ar_fields = array();
@@ -462,9 +465,12 @@ class Expo_Checkin_Manager_Admin {
 		$theOptions['last_import_header'] = $hdr_row ; 
 	    update_option($this->plugin_name, $theOptions);
 		
-		$url = admin_url() . 'admin.php?page='.$this->plugin_name.'-import';
-		wp_redirect( $url );
-		exit;
+		$strAnswer = $this->create_entries_from_db();
+		$strAnswer .= '<h3>Imported ' . $filename . '. found ' . $group_total . ' records for form_id: ' . $form_id . '</h3>';
+
+		echo $strAnswer;
+		
+		wp_die();	// required by ajax
 	}
 	
 	/**
@@ -486,14 +492,19 @@ class Expo_Checkin_Manager_Admin {
 		return $v;
 	}
 	
+	// workhorse method that transforms data in the tmp db into entries
+	// uses the current form instance for this object
+	// only uploads records that have not been imported by looking WHERE data_sync IS NULL
 	public function create_entries_from_db() {
 		global $wpdb;
 		date_default_timezone_set('America/New_York');
 
-		$options = get_option( $this->plugin_name );
-		$form_id = $options['import_to_form']; //16;
+//		$options = get_option( $this->plugin_name );
+//		$form_id = $options['import_to_form'];
 
-		$regreason = 'Imported';		// 114  radio button on the form		
+		$form_id = $this->cform['id'];	// get the current form id
+
+		$regreason = 'Imported';	
 		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
 		
 		$sql = "SELECT * FROM $dbtable WHERE data_sync IS NULL";
@@ -502,32 +513,31 @@ class Expo_Checkin_Manager_Admin {
 		$cnt_entries_added = 0;
 
 		
-		// live database	
+		// get_field_number looks up the appropriate field for the current Gravity Forms form	
 		foreach ( $ans as $tmpdb ) {
 			$currdatetime = date('Y/m/d H:i:s', time());
 			$newEntry = array(
-				'form_id' => $tmpdb->form_id,
+				'form_id' => $form_id,
 				'payment_status' => $tmpdb->payment_status,
 				'payment_method' => 'Offline',
-				'149' => $tmpdb->group_name,
-				'150' => $tmpdb->regtype,
-				'152' => $tmpdb->source . ' at ' .$currdatetime,
-				'151' => $regreason,
-				'153' => $tmpdb->notes,
-				'20' => $tmpdb->firstname,
-				'22' => $tmpdb->lastname,
-				'26' => $tmpdb->address,
-				'27' => $tmpdb->city,
-				'36' => $tmpdb->state,
-				'28' => $tmpdb->zip,
-				'6' => $tmpdb->email,
-				'7' => $tmpdb->phone,
-				'11' => $tmpdb->precon,
-				'41' => $tmpdb->spouse_firstname,
-				'42' => $tmpdb->spouse_lastname,
-				'43' => $tmpdb->spouse_email,
-				'46' => $tmpdb->spouse_precon,
-				'153' => $tmpdb->notes,
+				$this->get_field_number('group_name')    => $tmpdb->group_name,
+				$this->get_field_number('regtype')       => $tmpdb->regtype,
+				$this->get_field_number('source')        => $tmpdb->source . ' at ' .$currdatetime,
+				$this->get_field_number('regreason')     => $regreason,
+				$this->get_field_number('reg1notes')     => $tmpdb->notes,
+				$this->get_field_number('reg1firstname') => $tmpdb->firstname,
+				$this->get_field_number('reg1lastname')  => $tmpdb->lastname,
+				$this->get_field_number('reg1address')   => $tmpdb->address,
+				$this->get_field_number('reg1city')      => $tmpdb->city,
+				$this->get_field_number('reg1state')     => $tmpdb->state,
+				$this->get_field_number('reg1zip')       => $tmpdb->zip,
+				$this->get_field_number('reg1email')     => $tmpdb->email,
+				$this->get_field_number('reg1phone')     => $tmpdb->phone,
+				$this->get_field_number('reg1precon')    => $tmpdb->precon,
+				$this->get_field_number('reg2firstname') => $tmpdb->spouse_firstname,
+				$this->get_field_number('reg2lastname')  => $tmpdb->spouse_lastname,
+				$this->get_field_number('reg2email')     => $tmpdb->spouse_email,
+				$this->get_field_number('reg2precon')    => $tmpdb->spouse_precon,
 			);
 			$lid = GFAPI::add_entry( $newEntry );
 			if ( $lid > 0 ) {
@@ -538,8 +548,10 @@ class Expo_Checkin_Manager_Admin {
 			}
 		}
 
-		echo '<h3>Found: '.$cnt_to_add .'</h3>';
-		echo '<h3>Added: '.$cnt_entries_added.'</h3>';
+		$strAnswer = '<h3>Found: '.$cnt_to_add .' in the temp database staging table.</h3>';
+		$strAnswer .= '<h3>Added: '.$cnt_entries_added.' Entries</h3>';
+		
+		return $strAnswer;
 
 	}
 

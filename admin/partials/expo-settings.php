@@ -69,40 +69,6 @@
             </ul>        
         </fieldset>
 	</form>
-<?php
-global $wpdb;
-		$dbtable = $wpdb->prefix . 'expo_checkin_tmp';
-		$sql = "SELECT * FROM $dbtable WHERE id = 733";
-		$ans = $wpdb->get_results( $sql );
-		$tmpdb = $ans[0];
 
-			$newEntry = array(
-				$this->get_field_number('group_name')    => $tmpdb->group_name,
-				$this->get_field_number('regtype')       => $tmpdb->regtype,
-				$this->get_field_number('source')        => $tmpdb->source,
-				$this->get_field_number('regreason')     => $tmpdb->regreason,
-				$this->get_field_number('reg1firstname') => $tmpdb->firstname,
-				$this->get_field_number('reg1lastname')  => $tmpdb->lastname,
-				$this->get_field_number('reg1email')     => $tmpdb->email,
-				$this->get_field_number('reg1address')   => $tmpdb->address,
-				$this->get_field_number('reg1city')      => $tmpdb->city,
-				$this->get_field_number('reg1state')     => $tmpdb->state,
-				$this->get_field_number('reg1zip')       => $tmpdb->zip,
-				$this->get_field_number('reg1phone')     => $tmpdb->phone,
-				$this->get_field_number('reg1precon')    => $tmpdb->precon,
-				$this->get_field_number('reg1checkedin') => $tmpdb->checkedin,
-				$this->get_field_number('reg1notes')     => $tmpdb->notes,
-				$this->get_field_number('reg2firstname') => $tmpdb->spouse_firstname,
-				$this->get_field_number('reg2lastname')  => $tmpdb->spouse_lastname,
-				$this->get_field_number('reg2email')     => $tmpdb->spouse_email,
-				$this->get_field_number('reg2precon')    => $tmpdb->spouse_precon
-			);        
- 		echo '<pre>';
-		print_r( $newEntry );
-		echo '</pre>';
- 
- ?>
-<div id="dbTableColumns"></div>
-<div id="fieldList"></div> 
 
 </div> <!-- .wrap -->

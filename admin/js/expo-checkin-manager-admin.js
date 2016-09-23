@@ -39,9 +39,7 @@
 //			$tabLinkActive,
 //			$currentTabLink,
 //			$showChild = $(".show-child-if-checked"),
-			$hash,
-			ajax_url = '/gf/wp-admin/admin-ajax.php';
-
+			$hash;
 
 		// Tabs on load
 	 	if(window.location.hash){
@@ -67,47 +65,65 @@
 			}
 		});
 			
-		
+		// update the current form option in both the manager object and the options table
 		$('.gflist').change( function(e) {
 			e.preventDefault();
-			var myLabel = $.trim( $("label[for='"+e.srcElement.id+"']").text() );
 			$.post( ajaxurl, 
 				{	
-					'action' : 'get_form_fields', 
-					'form_id'  : e.srcElement.value,
-					'text'   : myLabel
-				}, 
-				function( fieldList ) {
-					$('#fieldList').html( fieldList );
-					console.log('show fields for ' + myLabel);
+					'action' : 'set_selected_form', 
+					'form_id'  : e.srcElement.value
 				}
 			);			
 		});
 		
-		// test to see if the page I want is loaded
-		if ( $('#expo-settings').length > 0 ) {
-			$.post( ajaxurl, 
-				{	
-					'action' : 'get_form_fields', 
-					'form_id' : 0,
-					'text'    : ''
-				}, 
-				function( fieldList ) {
-					$('#fieldList').html( fieldList );
-					console.log('show curr form fields');				
+		// monitor file selection process, enable the import button when a file is selected
+		$('#csv_import_file').change( function(e) {
+			e.preventDefault();
+			console.log( 'import csv file selected.' );
+			$('#import_csv_sheet_btn').prop('disabled',false);
+		});
+
+		// import the file from above
+		$('#frm_import_sheet').submit( function( e ) {
+			$.ajax( {
+				url: ajaxurl,
+				type: 'POST',
+				data: new FormData( this ),
+				processData: false,
+				contentType: false,
+				success: function( results ) {
+					$('#import_results').html( results );
+					console.log('results: ' + results );
 				}
-			);
-			
-			$.post( ajaxurl, 
-				{ 
-					'action' : 'get_dbtable_columns',
-					'tablename' :  'expo_checkin_tmp'
-				},
-				function( columnList ) {
-					$('#dbTableColumns').html( columnList );
-					console.log('show tmp db columns');
 			});
-		}
+			e.preventDefault();
+		});
+	
+		
+		// test to see if the page I want is loaded
+//		if ( ( $('#expo-settings').length > 0 ) || ( $('#import-sheets').length > 0 ) ) {
+//			$.post( ajaxurl, 
+//				{	
+//					'action' : 'get_form_fields', 
+//					'form_id' : 0,
+//					'text'    : ''
+//				}, 
+//				function( fieldList ) {
+//					$('#fieldList').html( fieldList );
+//					console.log('show curr form fields');				
+//				}
+//			);
+//			
+//			$.post( ajaxurl, 
+//				{ 
+//					'action' : 'get_dbtable_columns',
+//					'tablename' :  'expo_checkin_tmp'
+//				},
+//				function( columnList ) {
+//					$('#dbTableColumns').html( columnList );
+//					console.log('show tmp db columns');
+//			});
+//		}
 	
 	});
 

@@ -163,27 +163,21 @@ class Expo_Checkin_Manager {
 		// Add menu item
 		$this->loader->add_action( 'admin_menu', $plugin_admin, 'add_plugin_admin_menu' );
 
-		// Add Settings link to the plugin
-//		$plugin_basename = plugin_basename( plugin_dir_path( __DIR__ ) . $this->plugin_name . '.php' );
-//		$this->loader->add_filter( 'plugin_action_links_' . $plugin_basename, $plugin_admin, 'add_action_links' );
-
 		// Save/Update our plugin options
 		$this->loader->add_action('admin_init', $plugin_admin, 'options_update'); // calls public function in class-[plugin-name]-admin.php
-		
-//        $this->loader->add_action( 'login_enqueue_scripts', $plugin_admin, 'wp_cbf_login_css' );
-		
+			
 		$this->loader->add_action( 'exm_export_entries', $plugin_admin, 'export_entries');
-		$this->loader->add_action( 'exm_create_entries_from_db', $plugin_admin, 'create_entries_from_db');
-		
+	
 		$this->loader->add_filter( 'exm_count_tmp_records', $plugin_admin, 'count_tmp_records' );
 		
 		$this->loader->add_filter( 'exm_get_gf_forms_list', $plugin_admin, 'get_gf_forms_list' );
 
 
 		// importing csv
-		$this->loader->add_action( 'wp_ajax_submit_content', $plugin_admin, 'import_csv_processor' );
+		$this->loader->add_action( 'wp_ajax_import_csv', $plugin_admin, 'import_csv_processor' );
 			
 		$this->loader->add_action( 'wp_ajax_get_form_fields', $plugin_admin, 'get_form_fields_callback' );
+		$this->loader->add_action( 'wp_ajax_set_selected_form', $plugin_admin, 'set_curr_form_callback' );
 		$this->loader->add_action( 'wp_ajax_get_dbtable_columns', $plugin_admin, 'get_dbtable_columns_callback' );
 
 	}

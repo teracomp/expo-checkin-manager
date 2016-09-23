@@ -10,24 +10,15 @@
  */
 ?>
 <div id="import-sheets" class="wrap">
-    <form method="post" name="expo_manager_options" action="options.php">
+    <form id="frm_import_sheet" action="<?php echo admin_url( 'admin-ajax.php' ) ?>" method="post" enctype="multipart/form-data">
         <?php	
             // /*
             // * Grab all value if already set
             // */
             $options = get_option($this->plugin_name);
-			$last_import_header = $options['last_import_header'];
-			$last_import_header = implode(", ", $last_import_header );
-
-			$header_rows_count = $options['header_rows_count'];
-			$import_group_name = $options['import_group_name'];
 			$import_to_form    = $options['import_to_form'];
             $last_import_count  = $options['last_import_count'];
 			$last_import_count = apply_filters('exm_count_tmp_records', $v);
-			if ( $last_import_count == 0 ) {
-				$last_import_count = 'unk';
-			}
-			$import_one_group = $options['import_one_group'];  // 1==sheet is one group, 0==multiple groups and types
 
 			// get list of valid gravity forms
 			$gfList = apply_filters( 'exm_get_gf_forms_list' );
@@ -35,38 +26,27 @@
             /*
             * Set up hidden fields
             */
-            settings_fields($this->plugin_name);
-            do_settings_sections($this->plugin_name);
+            wp_nonce_field( 'import_csv', 'my_nonce_field' ); 
+            settings_fields($this->plugin_name); 
+
         ?>
     
-        <h2><?php esc_attr_e( '1. Import Sheets (Groups, Sponsors, Speakers, Special) into Selected Gravity Forms Entries', $this->plugin_name ); ?></h2>
-        <h3>Process of tranforming a signup sheet into Gravity Forms entries requires these steps:</h3>
+        <h2><?php esc_attr_e( '1. Import Sheets into Selected Gravity Forms Entries (i.e., Groups, Sponsors, Speakers, Specials)', $this->plugin_name ); ?></h2>
 		<ol>
-        	<li>Update settings to prepare for import:
-                <ol>
-                    <li>Select the target form</li>
-                    <li>Each form needs to have a mapping template.</li>
-                    <li>Indicate the number of header rows in the csv file (default: 1)</li>
-                    <li>Provide a group name if there is none in the data (default: first person on the list)</li>
-                    <li>Save Settings</li>
-                </ol>
-            </li>
-            <li>Choose the file to import. Import the sheet to the temp database table</li>
-            <li>Create entries for the form. This pushes the data from the database table to the entries.</li>
+            <li>Select the target form</li>
+            <li>Select file to import (verify the header column names are valid)</li>
+            <li>If valid, Import the file as Entries for the applicable form</li>
         </ol>
-        <p>The "Last Import Header" is currently shown for development, but provides a clue that the import was successful.</p>
-        <p>Ready to create # entries indicates how many records were last imported and ready to create entries
-        Ultimately steps 2 &amp; 3 will be combined.</p>
 
+       	<h4>Step 1: Select Form</h4>
 		<fieldset>
-        	<h4>Select Form:</h4>
             <ul>
             <?php
                 foreach( $gfList as $key=>$value ) {
             ?>            
                 <li>
                     <label for="<?php echo $this->plugin_name; ?>-import-to-form-<?php echo $key?>">
-                        <input type="radio" <?php checked( $options['import_to_form'], $key ); ?>
+                        <input class="gflist" type="radio" <?php checked( $options['import_to_form'], $key ); ?>
                         	id="<?php echo $this->plugin_name; ?>-import-to-form-<?php echo $key?>" 
                         	name="<?php echo $this->plugin_name; ?>[import_to_form]" value="<?php echo $key ?>">
                         &nbsp;<?php echo $value; ?>
@@ -78,79 +58,30 @@
             </ul>        
         </fieldset>
 
-
-        <fieldset>
-            <label for="<?php echo $this->plugin_name; ?>[header_rows_count]">Number of Header Rows: 
-                <input type="text" id="<?php echo $this->plugin_name; ?>-header_rows_count" name="<?php echo $this->plugin_name; ?>[header_rows_count]" value="<?php if(!empty($header_rows_count)) echo $header_rows_count; ?>"/>
-            </label>
-        </fieldset>
-
-        <fieldset>
-            <label for="<?php echo $this->plugin_name; ?>[import_one_group]">Import One Group: 
-                <input type="checkbox" 
-                	id="<?php echo $this->plugin_name; ?>-import_one_group" 
-                    name="<?php echo $this->plugin_name; ?>[import_one_group]" 
-                    <?php checked( $options['import_one_group'], 'on' ); ?>
-                    />
-            </label>
-        </fieldset>
-
-        <fieldset>
-            <label for="<?php echo $this->plugin_name; ?>[import_group_name]">Group Name (if importing one group): 
-                <input type="text" id="<?php echo $this->plugin_name; ?>-import_group_name" name="<?php echo $this->plugin_name; ?>[import_group_name]" value="<?php if(!empty($import_group_name)) echo $import_group_name; ?>"/>
-            </label>
-        </fieldset>
-
-<!--    
-        <fieldset>
-            <input type="hidden" id="<?php echo $this->plugin_name; ?>-last_import_count" name="<?php echo $this->plugin_name; ?>[last_import_count]" value="<?php if(!empty($last_import_count)) echo $last_import_count; ?>"/>
-            <label for="<?php echo $this->plugin_name; ?>[last_import_count]">Last Import Count: <?php if(!empty($last_import_count)) echo $last_import_count; ?></label>
-        </fieldset>
--->
-            <?php submit_button(__('1. Save Settings', $this->plugin_name), 'primary','submit', TRUE); ?>
-
-	</form>
-
-    <form id="frmGetImportFile" name="frmGetImportFile" action="<?php echo admin_url( 'admin-ajax.php' ) ?>" method="post" enctype="multipart/form-data">
-        <?php 
-            wp_nonce_field( 'submit_content', 'my_nonce_field' ); 
-            settings_fields($this->plugin_name); 
-        ?>
-        <fieldset>
-            <label for="<?php echo $this->plugin_name; ?>[last_import_header]">Last Import Header: 
-                <input type="text" class="wide-text" id="<?php echo $this->plugin_name; ?>-last_import_header" name="<?php echo $this->plugin_name; ?>[last_import_header]" value="<?php if(!empty($last_import_header)) echo $last_import_header; ?>"/>
-            </label>
-        </fieldset>
-
+       	<h4>Step 2: Select csv File</h4>
         <fieldset>
         	<input class="button-primary" type='file' name='csv_import_file' id='csv_import_file' accept='.csv'>
         </fieldset>
-	
-        <fieldset>
-        	<input type='hidden' name='action' value='submit_content'> 
-            <input class="button-primary" type='submit' value='2. Import Sheet'>
-        </fieldset>
 
         <fieldset>
-            <input type="hidden" id="<?php echo $this->plugin_name; ?>-last_import_count" name="<?php echo $this->plugin_name; ?>[last_import_count]" value="<?php if(!empty($last_import_count)) echo $last_import_count; ?>"/>
-            <label for="<?php echo $this->plugin_name; ?>[last_import_count]">Ready to create <?php if(!empty($last_import_count)) echo $last_import_count; ?> entries.</label>
+        	<?php if ( $last_import_count > 0 ) { ?>
+	            <label>Ready to create <?php if(!empty($last_import_count)) echo $last_import_count; ?> entries.</label>
+			<?php } else { ?>
+				<label>Please select a file first!</label>
+            <?php } ?>
         </fieldset>
+
+        <h4>Step 3: Import the file</h4>
+        <fieldset>
+        	<input type='hidden' name='action' value='import_csv'> 
+            <input disabled id="import_csv_sheet_btn" class="button-primary" type='submit' value='Import File'>
+        </fieldset>
+
     
     </form>
-    <form id="frmCreateEntries" method="post" name="create_entries">
-		<?php 	
-            settings_fields($this->plugin_name); 
-			
-            // react to button click
-            __( submit_button('3. Create Entries from DB', 'primary', 'btn_create_entries', TRUE)); 
-			
-        ?>
-	</form>
-	<?php
-			if ( isset( $_REQUEST['btn_create_entries'] ) ) {
-				do_action('exm_create_entries_from_db');
-			}
-	?>
+    
+    <div id="import_results"></div>
+    
     
         <h2><?php esc_attr_e( '2. Update Selected Gravity Forms Entries by Importing Checkin App CSV', $this->plugin_name ); ?></h2>
         <h3>Process</h3>
