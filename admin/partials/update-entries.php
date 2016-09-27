@@ -30,20 +30,23 @@
             settings_fields($this->plugin_name); 
 
         ?>
-    
-        <h2><?php esc_attr_e( '1. Import Sheets into Selected Gravity Forms Entries (i.e., Groups, Sponsors, Speakers, Specials)', $this->plugin_name ); ?></h2>
+
+        <h2><?php esc_attr_e( '2. Update Selected Gravity Forms Entries by Importing Checkin App CSV', $this->plugin_name ); ?></h2>
+        <h3>Process</h3>
+        <p>When the conference is over, we'll import the checkin data back to the database by:</p>
 		<ol>
             <li>Select the target form</li>
-            <li>Select file to import (verify the header column names are valid)</li>
-            <li>If valid, Import the file as Entries for the applicable form</li>
+            <li>Choose the file to import</li>
+            <li>Import the Sheet</li>
         </ol>
-		<h3>Valid Column Names</h3>
-        <p>When preparing your import files, use any of the following columns:</p>
-        <p style="margin-left:2em;">group_name, group_total, regtype, regreason, payment_status, source, <br />
-        	firstname, lastname, email, address, city, state, zip, phone, precon, <br />
-            spouse_firstname, spouse_lastname, spouse_email, spouse_precon, notes</p>
-        <p>This simplifies the entire process! </p>
-        <hr />
+        <p>The csv file will have the form_id and the lead_id as part of the key fields for updating data.</p>
+        <p>The code will use Gravity Forms API methods:</p>
+        	<ol>
+            	<li>get_entries(form_id). Returns all the entries for a given form.</li>
+            	<li>get_entry(entry_id). Returns one entry based on entry_id (which is the lead_id)</li>
+                <li>update_entry( array( field_id, value )). Allows us to update the entry by targeting the specific form field.</li>
+            </ol>
+
        	<h4>Step 1: Select Form</h4>
 		<fieldset>
             <ul>
@@ -64,29 +67,24 @@
             ?>
             </ul>        
         </fieldset>
-
+        
+        <h4><em>Working on this functionality</em></h4>
+<!--
        	<h4>Step 2: Select csv File</h4>
         <fieldset>
-        	<input class="button-primary" type='file' name='csv_import_file' id='csv_import_file' accept='.csv'>
+        	<input class="button-primary" type='file' name='csv_update_file' id='csv_update_file' accept='.csv'>
         </fieldset>
 
-        <fieldset>
-        	<?php if ( $last_import_count > 0 ) { ?>
-	            <label>Ready to create <?php if(!empty($last_import_count)) echo $last_import_count; ?> entries.</label>
-			<?php } else { ?>
-				<label>Please select a file first!</label>
-            <?php } ?>
-        </fieldset>
-
-        <h4>Step 3: Import the file</h4>
+        <h4>Step 3: Update Entries</h4>
         <fieldset>
         	<input type='hidden' name='action' value='import_csv'> 
-            <input disabled id="import_csv_sheet_btn" class="button-primary" type='submit' value='Import File'>
+            <input disabled id="update_entries_btn" class="button-primary" type='submit' value='Update Entries'>
         </fieldset>
 
     
-    </form>
+-->    </form>
     
-    <div id="import_results"></div>
+    <div id="update_results"></div>
     
+
 </div>

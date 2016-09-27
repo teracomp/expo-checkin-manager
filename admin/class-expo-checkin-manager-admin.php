@@ -75,23 +75,8 @@ class Expo_Checkin_Manager_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_styles() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Expo_Checkin_Manager_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Expo_Checkin_Manager_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-
-//		if ( 'settings_page_expo-checkin-manager' == get_current_screen()->id ) {
-			wp_enqueue_style( 'wp-color-picker' ); // for use in creating style for conference forms
-			wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/expo-checkin-manager-admin.css', array( 'wp-color-picker' ), $this->version, 'all' );
-//		}
+		wp_enqueue_style( 'wp-color-picker' ); // for use in creating style for conference forms
+		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/expo-checkin-manager-admin.css', array( 'wp-color-picker' ), $this->version, 'all' );
 	}
 
 	/**
@@ -100,22 +85,8 @@ class Expo_Checkin_Manager_Admin {
 	 * @since    1.0.0
 	 */
 	public function enqueue_scripts() {
-
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Expo_Checkin_Manager_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Expo_Checkin_Manager_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
-//		if ( 'settings_page_expo-checkin-manager' == get_current_screen()->id ) {
-			wp_enqueue_media();   // Enqueues all scripts, styles, settings, and templates necessary to use all media JavaScript APIs.
-			wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/expo-checkin-manager-admin.js', array( 'jquery', 'wp-color-picker', 'media-upload'  ), $this->version, false );
-//		}
+		wp_enqueue_media();   // Enqueues all scripts, styles, settings, and templates necessary to use all media JavaScript APIs.
+		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/expo-checkin-manager-admin.js', array( 'jquery', 'wp-color-picker', 'media-upload'  ), $this->version, false );
 	}
 	
 	/**
@@ -133,6 +104,7 @@ class Expo_Checkin_Manager_Admin {
 		add_menu_page( 'Exponential Events Checkin Manager', 'Expo Checkin', 'manage_options', $this->plugin_name, array($this, 'display_plugin_setup_page'), 'dashicons-id', $position );
 		add_submenu_page($this->plugin_name, 'Import Sheets', 'Import Sheets', 'manage_options', $this->plugin_name.'-import', array($this, 'display_plugin_import_page'));
 		add_submenu_page($this->plugin_name, 'Export Data', 'Export Data', 'manage_options', $this->plugin_name.'-export', array($this, 'display_plugin_export_page'));
+		add_submenu_page($this->plugin_name, 'Update Entries', 'Update Entries', 'manage_options', $this->plugin_name.'-update', array($this, 'display_plugin_update_page'));
 		add_submenu_page($this->plugin_name, 'Add/Edit Regs', 'Add/Edit Regs', 'manage_options', $this->plugin_name.'-addedit', array($this, 'display_plugin_addedit_page'));
 		add_submenu_page($this->plugin_name, 'Reports', 'Reports', 'manage_options', $this->plugin_name.'-reports', array($this, 'display_plugin_reports_page'));
 		add_submenu_page($this->plugin_name, 'Conf Config', 'Conf Config', 'manage_options', $this->plugin_name.'-config', array($this, 'display_plugin_config_page'));
@@ -159,7 +131,10 @@ class Expo_Checkin_Manager_Admin {
 		include_once( 'partials/import-sheets_settings.php' );
 	}
 	
-	public function display_plugin_addedit_page() {
+	public function display_plugin_update_page() {
+		include_once( 'partials/update-entries.php' );
+	}
+		public function display_plugin_addedit_page() {
 		include_once( 'partials/add-edit-records_settings.php' );
 	}
 		
@@ -351,13 +326,19 @@ class Expo_Checkin_Manager_Admin {
 
 		$ans = array();
 		$forms = GFAPI::get_forms();   // get_forms() returns active forms
+
+		$search_criteria['status'] = 'active';		// active entries only
+		$search_criteria['field_filters'][] = array( 'key' => 'payment_status', 'operator'=>'contains', 'value'=>'paid');		// paid or unpaid (not case sensitive)
 	
 		foreach ( $forms as $frm ) { 			
-			$search_criteria = array( 'status' => 'active' );
-			$search_criteria['field_filters'][] = array("key" => 'payment_status', value => 'Paid');
 			$total_entries = GFAPI::count_entries( $frm['id'], $search_criteria );
-			$total_registrants = 0;
-			$ans[ $frm['id'] ] = $frm['title'] . ' | ' . $total_entries.' entries | '.$total_registrants. ' registrants)';	// build a key=>value array
+//			$pagesize = array( 'offset'=>0, 'page_size'=>$total_entries );
+//			$entries = GFAPI::get_entries( $frm['id'], $search_criteria, null, $pagesize );
+//			$total_registrants = 0;
+//			foreach ( $entries as $entry) {
+//				$total_registrants += $this->count_regs_per_entry( $entry ); // get the details per entry
+//			}
+			$ans[ $frm['id'] ] = $frm['title'] . ' (' . $total_entries.' active entries)';	// build a key=>value array
 		}
 		return $ans;
 	}
@@ -375,7 +356,7 @@ class Expo_Checkin_Manager_Admin {
 		$filename = $_FILES['csv_import_file']['name'];		
 
 		$theOptions = get_option($this->plugin_name);
-		$groupName         = $theOptions['import_group_name'];
+		$groupName         = ''; // $theOptions['import_group_name']; --> group_name is a column in the sheet being imported
 		$import_to_form    = $theOptions['import_to_form'];
 
 		$default_payment_status = 'Paid'; 		// *** HARD-CODE ALERT :: however, it's probably valid *** //
@@ -555,315 +536,171 @@ class Expo_Checkin_Manager_Admin {
 
 	}
 
+	// respond to ajax request to update the filename from export-registrants_settings.php
+	public function set_export_filename_callback() {
+		$newName = $_REQUEST['csv_filename'];
+		$options = get_option( $this->plugin_name );
+		$options['csv_filename'] = sanitize_file_name($newName);
+		$ans = update_option( $this->plugin_name, $options );
+		
+		if ( $ans ) {
+			$response = '<h3 class="alert alert-success">CSV Filename saved as ' . $newName . '</h3>';
+		} else {
+			$response = '<h3 class="alert alert-warning">Update Failed for ' . $newName . '! Please refresh the page and try again!</h3>';
+		}
+		
+		echo $response;
+		
+		wp_die();	// required by ajax
+	}
+
+	public function set_export_entry_id_callback() {
+		$newEntryID = $_REQUEST['entry_id'];
+		$options = get_option( $this->plugin_name );
+		$options['last_export_entry_id'] = intval( $newEntryID );
+		$ans = update_option( $this->plugin_name, $options );
+
+		if ( $ans ) {
+			$response = '<h3 class="alert alert-success">Start Entry ID saved as ' . $newEntryID . '</h3>';
+		} else {
+			$response = '<h3 class="alert alert-warning">Failed to set Entry ID to ' . $newEntryID . '! Please refresh the page and try again!</h3>';
+		}
+		
+		echo $response;
+		
+		wp_die();	// required by ajax
+		
+	}
+
+	// respond to ajax request to export entries from export-registrants_settings.php
+	public function export_entries_callback() {		
+		$response = 'this is the callback for export entries';		
+		$ans = $this->export_entries();
+	
+		if ( $ans ) {
+			$response = $ans;
+		} else {
+			$response = '<h3 class="alert alert-warning">Export Failed! Please refresh the page and try again!</h3>';
+		}		
+		echo $response;		
+		wp_die();	// required by ajax
+	}
+
+	// count the horizontal regs per entry -- total_ind_regs is empty for imported participants
+	private function count_regs_per_entry($entry) {
+		$cnt=0;
+		for ( $i=1; $i<=10; $i++ ) {
+			if ( $entry[$this->get_field_number('reg'.$i.'firstname')] <> '' ) {
+				$cnt++;
+			}
+		}
+		return $cnt;
+	}
 	public function export_entries() {
 		global $wpdb;
 		// get the entry id from the last import. export only the new records
 		$options = get_option( $this->plugin_name );
-		$form_id = $options['import_to_form']; //16;
+		$form_id                = $options['import_to_form'];
+		$last_export_entry_id   = $options['last_export_entry_id'];	
+        $csv_filename           = $options['csv_filename'];
+		$max_lead_id = 0;	
+		
+		// define search_criteria for count_entries and get_entries methods
+		$search_criteria['status'] = 'active';		// active entries only
+		$search_criteria['field_filters'][] = array( 'key' => 'payment_status', 'operator'=>'contains', 'value'=>'paid');		// paid or unpaid (not case sensitive)
+		
+		$total_entries = GFAPI::count_entries($form_id, $search_criteria );
+		$total_registrants = 0;	// running total of registrants
+		$page_size = 50;			// Gravity Forms suggests this can be as high as 200
+		$pages = ceil( $total_entries / $page_size );	// manage one page at a time
+		$sorting = null;			// no need to sort
+		
+	
+		for ( $i=0; $i<$pages; $i++) {
+			$paging = array( 'offset' => $i*$page_size, 'page_size' => $page_size );		// get ALL entries for this form
+			$entries = GFAPI::get_entries( $form_id, $search_criteria, $sorting, $paging );
 
-		$expo_dc_form_lead_ids = '19, 119';
-		$payment_status = 'Paid';
-		$entry_status = 'active';
-
-        $options = get_option($this->plugin_name);
-        $csv_filename = $options['csv_filename'];
-		if ( $options['last_export_entry_id'] ) {
-			$last_export_entry_id = $options['last_export_entry_id'];
-		} else {
-			$last_export_entry_id = 0;			
-		}
-
-		$rg_lead        = $wpdb->prefix . 'rg_lead';
-		$rg_lead_detail = $wpdb->prefix . 'rg_lead_detail';
-
-		/**
-		 * grab all the detail records in one recordset...we'll look through this a bunch
-		 */
-		$sql = "SELECT `lead_id`, `field_number`, `value` field_value FROM `$rg_lead_detail` WHERE `form_id`=$form_id ORDER BY `lead_id`, `field_number`";
-		$details = $wpdb->get_results( $sql );
-
-//		echo '<h4>SQL Details</h4>';
-//		echo $sql;
-		
-		/**
-		 * these are the lead registrants -- process these and look for their team members
-		 **/
-		$sql = "SELECT a.id lead_id, payment_status, payment_method, 
-			(SELECT d.value FROM $rg_lead_detail d WHERE d.lead_id=a.id AND field_number IN ($expo_dc_form_lead_ids)) cnt 
-			FROM `$rg_lead` a 
-			WHERE a.form_id=$form_id AND a.status='$entry_status' AND a.payment_status IS NOT NULL
-			AND a.id > $last_export_entry_id";
-
-//			WHERE a.form_id=$form_id AND a.payment_status='$payment_status' AND a.status='$entry_status'";
-		
-//		echo '<h4>SQL Leads</h4>';
-//		echo $sql;
-			
-		
-		$lead_registrants = $wpdb->get_results( $sql );
-		
-		$total_lead_registrants = count( $lead_registrants );
-		$total_registrants=0;
-		
-		if ( $total_lead_registrants > 0 ) {
-
-			$arRegFieldNumbers[10] = array();
-			
-			// primary registrant fields: (20,22,6,26,27,36,28,7,11,132,142)
-
-			$rreg = new RegFieldNumbers();
-			$rreg->regtype      = 199;
-			$rreg->regreason    = 200;
-			$rreg->source       = 201;
-			$rreg->seqnbr       = 1;
-			$rreg->group_name	= 152;
-			$rreg->total_ind_regs = 19;
-			$rreg->total_grp_regs = 119;
-			$rreg->firstname    = 20;
-			$rreg->lastname     = 22;
-			$rreg->email        = 6;
-			$rreg->address      = 26;
-			$rreg->city         = 27;
-			$rreg->state        = 36;
-			$rreg->zip          = 28;
-			$rreg->phone        = 7;
-			$rreg->precon       = 11;
-			$rreg->checkedin    = 132;
-			$rreg->notes        = 142;
-			$arRegFieldNumbers[0] = $rreg;
-
-			// second record fields: (41,42,43,46,133,143)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 2;
-			$rreg->firstname 	= 41;
-			$rreg->lastname 	= 42;
-			$rreg->email 		= 43;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 46;
-			$rreg->checkedin 	= 133;
-			$rreg->notes 		= 143;
-			$arRegFieldNumbers[1] = $rreg;
-		
-			// third record fields: (48,49,50,51,134,144)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 3;
-			$rreg->firstname 	= 48;
-			$rreg->lastname 	= 49;
-			$rreg->email 		= 50;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 51;
-			$rreg->checkedin 	= 134;
-			$rreg->notes 		= 144;
-			$arRegFieldNumbers[2] = $rreg;
-			
-			// 4th registrants fields: (53,54,55,56,135,145)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 4;
-			$rreg->firstname 	= 53;
-			$rreg->lastname 	= 54;
-			$rreg->email 		= 55;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 56;
-			$rreg->checkedin 	= 135;
-			$rreg->notes 		= 145;
-			$arRegFieldNumbers[3] = $rreg;
-		
-			// 5th registrants fields: (57,58,59,60,136,146)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 5;
-			$rreg->firstname 	= 57;
-			$rreg->lastname 	= 58;
-			$rreg->email 		= 59;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 60;
-			$rreg->checkedin 	= 136;
-			$rreg->notes 		= 146;
-			$arRegFieldNumbers[4] = $rreg;
-		
-			// 6th registrants fields: (63,64,65,66,137,147)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 6;
-			$rreg->firstname 	= 63;
-			$rreg->lastname 	= 64;
-			$rreg->email 		= 65;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 66;
-			$rreg->checkedin 	= 137;
-			$rreg->notes 		= 147;
-			$arRegFieldNumbers[5] = $rreg;
-		
-			// 7th registrants fields: (68,69,70,71,138,148)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 7;
-			$rreg->firstname 	= 68;
-			$rreg->lastname 	= 69;
-			$rreg->email 		= 70;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 71;
-			$rreg->checkedin 	= 138;
-			$rreg->notes 		= 148;
-			$arRegFieldNumbers[6] = $rreg;
-		
-			// 8th registrants fields: (73,74,75,76,139,149)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 8;
-			$rreg->firstname 	= 73;
-			$rreg->lastname 	= 74;
-			$rreg->email 		= 75;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 76;
-			$rreg->checkedin 	= 139;
-			$rreg->notes 		= 149;
-			$arRegFieldNumbers[7] = $rreg;
-		
-			// 9th registrants fields: (78,79,80,81,140,150)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 9;
-			$rreg->firstname 	= 78;
-			$rreg->lastname 	= 79;
-			$rreg->email 		= 80;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 81;
-			$rreg->checkedin 	= 140;
-			$rreg->notes 		= 159;
-			$arRegFieldNumbers[8] = $rreg;
-		
-			// 10th registrants fields: (83,84,85,86,141,151)
-			$rreg = new RegFieldNumbers();
-			$rreg->seqnbr 		= 10;
-			$rreg->firstname 	= 83;
-			$rreg->lastname 	= 84;
-			$rreg->email 		= 85;
-		//	$rreg->address 		= 26;
-		//	$rreg->city			= 27;
-		//	$rreg->state 		= 36;
-		//	$rreg->zip 			= 28;
-		//	$rreg->phone 		= 7;
-			$rreg->precon 		= 86;
-			$rreg->checkedin 	= 141;
-			$rreg->notes 		= 151;
-			$arRegFieldNumbers[9] = $rreg;
-
-			$ar = array();
-			
-		// get new entries for the current form
-//		$newEntries = GFAPI::get_entries( $this->cform['id'], $search_criteria );
-			
-			foreach ( $lead_registrants as $row ) {
-				$cnt = intval($row->cnt);
-				$lead_id = $row->lead_id;
+			foreach( $entries as $entry ) {
 				
-				$grp_count = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->total_grp_regs );
-				$ind_count = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->total_ind_regs );
-				$group_total = intval($grp_count) + intval($ind_count); 
-				$group_name = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->group_name );
-				
-				// add the lead to the array
-				$reg = new Registrant( $lead_id );
-				$reg->gf_lead_id     = $lead_id;
-				$reg->payment_status = $row->payment_status; // direct from the query
-				$reg->payment_method = $row->payment_method;
-				$reg->group_name     = $group_name;
-				$reg->form_id        = $form_id;
-				$reg->seqnbr         = 1;
-				$reg->group_total    = $cnt;
-				$reg->regtype        = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->regtype );
-				$reg->regreason      = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->regreason );
-				$reg->source         = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->source );
-
-				if ( $cnt > 1 ) {		// handle online registrations for multiple people -- more than one on this entry
-					$reg->regtype 	= 'Group Lead';
-					if ( $reg->group_name === '' ) {	// most likely blank, but making sure before resetting it
-						$group_name = 
-							$this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->firstname ) . ' ' . 
-							$this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->lastname  );
-						$reg->group_name = $group_name;
+				if ( intval($entry['id']) > $last_export_entry_id ) {		// only export those we want
+					$lead_id = $entry['id'];								// keep track in the checkin database for updating later
+					if ( $lead_id > $max_lead_id ) {
+						$max_lead_id = $lead_id;
 					}
-				}  elseif ( $group_name === '' ) {
-					$reg->regtype = 'Registrant';
-				}
-//				elseif ( $group_name <> '' ) {	// in this case the registrant is part of a group
-//					if ( $reg->regtype <> 'Speaker' || $reg->regtype <> 'Sponsor' ) {
-//						$reg->regtype = 'Group Member';
-//					}
-//				} else {							// otherwise, this is an individual registration
-//					$reg->regtype 	= 'Individual';
-//					$reg->group_name = '';
-//				}
-				
-				$reg->firstname   = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->firstname, 'TBD' );
-				$reg->lastname    = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->lastname, 'TBD' );
-				$reg->email       = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->email, 'TBD' );
-				$reg->address     = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->address );
-				$reg->city        = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->city );
-				$reg->state       = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->state );
-				$reg->zip         = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->zip );
-				$reg->phone       = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->phone );
-				$reg->precon      = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->precon );
-				$reg->checkedin   = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->checkedin, 'No' );
-				$reg->notes       = $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[0]->notes );
-				$reg->paid        = $row->payment_status;
-				$reg->datasource  = $reg->source;
-				$ar[] = $reg;
-				$total_registrants++;
+						
+					$seqnbr = 1;
+			
+					$group_total = $this->count_regs_per_entry($entry);		// this method counts all regs for the entry			
 
-				if ( $cnt > 1 ) {
-					// find all of the members of $lead_id's group and add them
-					for ( $i=2; $i<=$cnt; $i++ ) {
-						$reg = new Registrant( $lead_id );
-						$reg->gf_lead_id 	= $lead_id;
-						$reg->form_id		= $form_id;
-						$reg->seqnbr 		= $i;
-						$reg->group_name    = $group_name;
-						$reg->group_total 	= $cnt;
-						$reg->regtype 		= 'Group Member';
-						$reg->firstname		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->firstname, 'TBD' );
-						$reg->lastname 		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->lastname, 'TBD' );
-						$reg->email			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->email, 'TBD' );
-						$reg->address		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->address );
-						$reg->city 			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->city );
-						$reg->state			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->state );
-						$reg->zip 			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->zip );
-						$reg->phone			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->phone );
-						$reg->precon 		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->precon );
-						$reg->checkedin		= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->checkedin, 'No' );
-						$reg->notes			= $this->find_reg_item( $details, $lead_id, $arRegFieldNumbers[$i-1]->notes );
-						$reg->paid          = $row->payment_status;
-						$reg->datasource    = $reg->source;
-						$ar[] = $reg;
-						$total_registrants++;
+					// grab first and last name here in case we have an undefined group
+					$firstname = $entry[$this->get_field_number('reg'.$seqnbr.'firstname')];
+					$lastname = $entry[$this->get_field_number('reg'.$seqnbr.'lastname')];
+					$group_name = $entry[$this->get_field_number('group_name')];
+					if ( strlen($group_name) === 0 && $group_total > 3 ) {			// if there are more than 3, we have an undefine group
+						$group_name = $firstname . ' ' . $lastname . ' Group';
+					}
+					$regtype = $entry[$this->get_field_number('regtype')];
+					if ( $regtype === '' ) {
+						$regtype = 'Registrant';
+					}
+					$paid = $entry['payment_status'];
+					$source = $entry[$this->get_field_number('source')];
+					
+					// reg metadata
+					$reg = new Registrant( $lead_id );
+					$reg->gf_lead_id     = $lead_id;
+					$reg->paid           = $paid;	
+					$reg->group_name     = $group_name;
+					$reg->form_id        = $form_id;
+					$reg->group_total    = $group_total;
+					$reg->regtype        = $regtype;
+					$reg->datasource     = $source;
+
+					// reg individual data
+					$reg->seqnbr      = $seqnbr;
+					$reg->firstname   = $firstname;
+					$reg->lastname    = $lastname;
+					$reg->email       = $entry[$this->get_field_number('reg'.$seqnbr.'email')];
+					$reg->address     = $entry[$this->get_field_number('reg'.$seqnbr.'address')];
+					$reg->city        = $entry[$this->get_field_number('reg'.$seqnbr.'city')];
+					$reg->state       = $entry[$this->get_field_number('reg'.$seqnbr.'state')];
+					$reg->zip         = $entry[$this->get_field_number('reg'.$seqnbr.'zip')];
+					$reg->phone       = $entry[$this->get_field_number('reg'.$seqnbr.'phone')];
+					$reg->precon      = $entry[$this->get_field_number('reg'.$seqnbr.'precon')];
+					$reg->checkedin   = $entry[$this->get_field_number('reg'.$seqnbr.'checkedin')];
+						if ( strlen($reg->checkedin) === 0 ) { $reg->checkedin = 'No'; }
+					$reg->notes       = $entry[$this->get_field_number('reg'.$seqnbr.'notes')];
+					
+					$ar[] = $reg;
+					$total_registrants++;
+
+					if ( $group_total > 1 ) {
+						// find all of the members of $lead_id's group and add them
+						for ( $seqnbr=2; $seqnbr<=$group_total; $seqnbr++ ) {
+							$reg = new Registrant( $lead_id );
+							$reg->gf_lead_id 	= $lead_id;
+							$reg->form_id		= $form_id;
+							$reg->seqnbr 		= $seqnbr;
+							$reg->group_name    = $group_name;
+							$reg->group_total 	= $group_total;
+							$reg->regtype 		= $regtype;
+							$reg->firstname		= $entry[$this->get_field_number('reg'.$seqnbr.'firstname')];
+							$reg->lastname 		= $entry[$this->get_field_number('reg'.$seqnbr.'lastname')];
+							$reg->email         = $entry[$this->get_field_number('reg'.$seqnbr.'email')];
+							$reg->address       = $entry[$this->get_field_number('reg'.$seqnbr.'address')];
+							$reg->city          = $entry[$this->get_field_number('reg'.$seqnbr.'city')];
+							$reg->state         = $entry[$this->get_field_number('reg'.$seqnbr.'state')];
+							$reg->zip           = $entry[$this->get_field_number('reg'.$seqnbr.'zip')];
+							$reg->phone         = $entry[$this->get_field_number('reg'.$seqnbr.'phone')];
+							$reg->precon        = $entry[$this->get_field_number('reg'.$seqnbr.'precon')];
+							$reg->checkedin     = $entry[$this->get_field_number('reg'.$seqnbr.'checkedin')];
+								if ( strlen($reg->checkedin) === 0 ) { $reg->checkedin = 'No'; }
+							$reg->notes         = $entry[$this->get_field_number('reg'.$seqnbr.'notes')];
+							$reg->paid          = $paid;	
+							$reg->datasource    = $source;
+							$ar[] = $reg;
+							$total_registrants++;
+						}
 					}
 				}
 			}
@@ -885,33 +722,24 @@ class Expo_Checkin_Manager_Admin {
 			$arfields = array( $a->form_id, $a->gf_lead_id, $a->seqnbr, $a->group_name, $a->group_total, $a->regtype, $a->firstname, $a->lastname, 
 				$a->email, $a->address, $a->city, $a->state, $a->zip, $a->phone, $a->precon, $a->checkedin, $a->notes, $a->paid, $a->datasource );
 			fputcsv($out, $arfields, $delimiter = ",", $enclosure = '"');
-			$last_export_entry_id = $a->gf_lead_id;
 		}
 		
 		fclose($out);
+		$last_export_entry_id = $max_lead_id;
 
 		$csvlink = '<a href="'.$public_file.'">Link to file</a>';
-		$data = '<h2>Lead Registrants: '.$total_lead_registrants.'</h2>';
-		$data .= '<h2>All Registrants: '.$total_registrants.'</h2>';
-		$data .= '<h3>'.$csvlink.'</h3>';
-		$data .= '<h3>Last Export Entry ID: ' . $last_export_entry_id.'</h3>';
+		$data .= '<h3>Total Registrants Exported: '.$total_registrants.'</h3>';
+		$data .= '<h2>Download here: '.$csvlink.'</h2>';
+		$data .= '<h4>Last Export Entry ID: ' . $last_export_entry_id.'</h4>';
 		
 		$options['last_export_entry_id'] = $last_export_entry_id;
 	    update_option($this->plugin_name, $options);
 
-
-//		$data .= '<ol>';
-//		foreach( $ar as $reg ) {
-//			$data .= '<li>'.$reg->gf_lead_id.' '.$reg->firstname.' '.$reg->lastname.' group_total: '.$reg->group_total.'</li>';
-//		}
-//		$data .= '</ol>';
-//
-		echo $data;
-		
-		return true;
-   
+		return $data;
+		   
 	}
 
+	// legacy method ... not used
 	private function find_reg_item( $details, $lead_id, $field_number, $default_value='' ) {
 		$v = $default_value;
 		

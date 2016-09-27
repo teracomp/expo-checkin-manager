@@ -43,30 +43,12 @@
                         <li><span class="check-done">Select destination form</span></li>
                     	<li><span class="check-done">Add New Registrants from import</span></li>
                         <li>Update Existing Registrants</li>
-                        <li>Map columns from CSV to form fields (will be in the 'Settings' submenu for this plugin)</li>
                     </ol>
                 </li>
-                <li>Export list of registrants <span class="check-done">(currently hard-wired for DC Regional)</span>, sponsors and speakers from Gravity Forms registration form 
-                	to csv-formatted file for the Exponential Checkin application database.</li>
-                <li>Add/Edit Entries
-                	<ol>
-	                    <li>Add through simplified interface that does not affect payment process</li>
-                        <li>Edit entry by selecting an "edit" link from list of names
-                        	<ol>
-		                        <li>Generate a list of all registrants with links to the main registrant</li>
-                                <li>Link to the form that contains the target registrant, e.g.,
-                                    <ol>
-                                        <li>{{ site }}/wp-admin/admin.php?page=gf_entries&amp;view=entry&amp;id=16&amp;lid=504</li>
-                                        <li>id == form_id</li>
-                                        <li>lid == gf_lead_id</li>
-                                    </ol> 
-                                </li>                                
-                                <li>btw: Gravity Forms allows config of the Entries table...pretty nice!</li>
-                            </ol>
-                        </li>
-                    </ol>
-                </li>
-                <li>Generate reports: predefined &amp; custom. Thinking about moving this to a shortcode for a page
+                <li><span class="check-done">Export list of registrants, sponsors and speakers from Gravity Forms Entries 
+                	to csv-formatted file for the Exponential Checkin application database.</span></li>
+                <li>Add/Edit Entries (need to discuss this feature)</li>
+                <li>Generate reports (need input here), probably a group of predefined &amp; custom. Thinking about moving this to a shortcode for a page
                 	with controlled access. Conceptually, the reports submenu is where we define the reports, the shortcode is where they are displayed.</li>
                 <li>Configure on-site conference page. Thinking about moving this to a shortcode for a page with controlled access.</li>
             </ol>

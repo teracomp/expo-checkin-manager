@@ -23,3 +23,15 @@
 .ecm-inline-button p.submit {
 	display: inline-block;
 }
+.ecm-left {
+	float: left;
+}
+.ecm-group-tweak-top {
+	margin-top: 3px;
+}
+.ecm-group-pad-right {
+	padding-right: 1em;
+}
+.ecm-group-pad-left {
+	padding-left: 1em;
+}
