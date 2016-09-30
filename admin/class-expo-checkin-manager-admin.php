@@ -387,6 +387,7 @@ class Expo_Checkin_Manager_Admin {
 			$hdr_offset = 0;
 		}
 		$hdr_row = $all_data[ $hdr_offset ];	// get the header row
+		
 		for ($i=1; $i<count($all_data); $i++ ) {			// build the registrants array
 			$registrants[] = $all_data[$i];
 		}
@@ -402,7 +403,7 @@ class Expo_Checkin_Manager_Admin {
 			
 		// here's the data
 		foreach ( $hdr_row as $h ) {
-			$ar_fields[] = $h;
+			$ar_fields[] = trim($h);			// sometimes there is whitespace around the field names
 		}
 	
 		$seqnbr = 1;
@@ -413,7 +414,7 @@ class Expo_Checkin_Manager_Admin {
 			}
 			$data = array();
 			for ( $i=0; $i<count($ar_fields); $i++ ) {
-				$data[$ar_fields[$i]] = $ar_values[$i];
+				$data[$ar_fields[$i]] = htmlentities( $ar_values[$i], ENT_QUOTES );
 			}
 			
 			$data['payment_status'] = ( $data['payment_status'] <> '' ) ? $data['payment_status'] : $default_payment_status;

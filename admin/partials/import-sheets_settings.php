@@ -69,14 +69,16 @@
         <fieldset>
         	<input class="button-primary" type='file' name='csv_import_file' id='csv_import_file' accept='.csv'>
         </fieldset>
+	
+    	<div id="importMsg"></div>
 
-        <fieldset>
+<!--        <fieldset>
         	<?php if ( $last_import_count > 0 ) { ?>
 	            <label>Ready to create <?php if(!empty($last_import_count)) echo $last_import_count; ?> entries.</label>
 			<?php } else { ?>
 				<label>Please select a file first!</label>
             <?php } ?>
-        </fieldset>
+        </fieldset>-->
 
         <h4>Step 3: Import the file</h4>
         <fieldset>

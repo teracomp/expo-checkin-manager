@@ -31,12 +31,56 @@
 		$('#csv_import_file').change( function(e) {
 			e.preventDefault();
 			console.log( 'import csv file selected.' );
+			var f = this.files[0];
+			if ( f ) {
+				var reader = new FileReader();
+				reader.onload = function( theFile ) {	
+					var content = theFile.target.result;				// get the file content
+					var headerRow = content.split(/[\r\n]/g)[0];		// get the header row
+					var headerArray = headerRow.split(',');
+					for ( var i=0; i<headerArray.length; i++) {
+						headerArray[i] = headerArray[i].trim();
+					}
+					var badColumnName = checkHeader( headerArray );
+					if ( badColumnName.length > 0 ) {
+						console.log('bad column name: ' + badColumnName );
+						$('#import_csv_sheet_btn').prop('disabled',true);
+						$('#importMsg').html('<h3>Bad Column Name Found!</h3><p>Please fix: <span style="color:red;"><strong><em>' + 
+							badColumnName + '</strong></em></span> and try again.</p>');
+					} else {
+						$('#importMsg').html('<h3>Ready to import ' + f.name + '</h3>');
+					}
+				};
+				reader.readAsText(f);			
+			} else {
+				console.log('Failed to load file');
+			}
 			$('#import_csv_sheet_btn').prop('disabled',false);
 		});
+
+		function checkHeader( ar ) {
+			var badColumn = '';
+			var validColumns = Array( 'group_name', 'group_total', 'regtype', 'regreason', 'payment_status', 'source',
+        			'firstname', 'lastname', 'email', 'address', 'city', 'state', 'zip', 'phone', 'precon',
+            		'spouse_firstname', 'spouse_lastname', 'spouse_email', 'spouse_precon', 'notes' );
+			for ( var i=0; i<ar.length; i++ ) {
+				if ( validColumns.indexOf(ar[i]) < 0 ) {
+					badColumn = ar[i];
+					break;
+				}
+			}
+			
+			return badColumn;
+		}
 
 		// import the file from above
 		$('#frm_import_sheet').submit( function( e ) {
 			console.log('Import Sheet clicked, form submitted');
+			var msg = $('#importMsg').html();
+			msg += '<hr /><p>importing...hang on...</p>';
+			$('#importMsg').html(msg);
+			
+			$('#import_csv_sheet_btn').prop('disabled', true);
 			$.ajax( {
 				url: ajaxurl,
 				type: 'POST',
@@ -44,8 +88,11 @@
 				processData: false,
 				contentType: false,
 				success: function( results ) {
+					$('#importMsg').html('');
 					$('#import_results').html( results );
 					console.log('results: ' + results );
+					$('#csv_import_file').val('');
+//					$('#import_csv_sheet_btn').prop('disabled', false);		
 				}
 			});
 			e.preventDefault();
