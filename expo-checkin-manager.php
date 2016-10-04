@@ -16,7 +16,7 @@
  * Plugin Name:       Exponential Check-In Manager
  * Plugin URI:        https://github.com/teracomp/expo-checkin-manager
  * Description:       Wordpress Admin plugin panel to support Check-in App
- * Version:           1.0.0
+ * Version:           1.0.5
  * Author:            Dave Phillips
  * Author URI:        https://exponential.org
  * License:           GPL-2.0+
