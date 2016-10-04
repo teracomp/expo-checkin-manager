@@ -9,7 +9,7 @@
  * that starts the plugin.
  *
  * @link              https://exponential.org
- * @since             1.0.0
+ * @since             1.0.5
  * @package           Expo_Checkin_Manager
  *
  * @wordpress-plugin
