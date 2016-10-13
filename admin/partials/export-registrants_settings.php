@@ -99,10 +99,11 @@
             <input id="export_csv_btn" class="button-primary" type='button' value='Create File'>
         </fieldset>
 
-    	<div id="export_csv_results">
-	       	<h4>4. View your file in your downloads folder.</h4>    
+		<div id="export_waiting" style="display:none;">
+            <img src="<?php echo plugin_dir_url( __FILE__ );?>images/loading_bar2s.gif" width="265" height="97" alt="please wait..."/>
         </div>
 
+    	<div id="export_csv_results"></div>
 	</form>
 
     <h2>Expected Output</h2>

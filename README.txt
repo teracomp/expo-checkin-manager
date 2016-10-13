@@ -54,3 +54,7 @@ directory take precedence. For example, `/assets/screenshot-1.png` would win ove
 
 = 1.0.5 =
 * Import and Export working well
+
+= 1.1.0 =
+* Added Update function
+* Added animated "Loading" gif to prompt the user to wait

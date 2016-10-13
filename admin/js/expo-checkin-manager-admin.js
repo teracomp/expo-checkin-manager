@@ -79,6 +79,7 @@
 			var msg = $('#importMsg').html();
 			msg += '<hr /><p>importing...hang on...</p>';
 			$('#importMsg').html(msg);
+			$('#import_waiting').css('display', 'block');
 			
 			$('#import_csv_sheet_btn').prop('disabled', true);
 			$.ajax( {
@@ -89,6 +90,7 @@
 				contentType: false,
 				success: function( results ) {
 					$('#importMsg').html('');
+					$('#import_waiting').css('display', 'none');
 					$('#import_results').html( results );
 					console.log('results: ' + results );
 					$('#csv_import_file').val('');
@@ -158,6 +160,8 @@
 		// export registrants to csv file
 		$('#export_csv_btn').click( function( e ) {
 			e.preventDefault();
+			$('#export_csv_btn').prop('disabled', true);
+			$('#export_waiting').css('display', 'block');
 			console.log('export_csv_btn clicked! csv file should happen soon!!');
 			$.post( ajaxurl,
 				{
@@ -165,11 +169,67 @@
 				},
 				function( response ) {
 					console.log('Export Sheet responded' );
+					$('#export_waiting').css('display', 'none');
 					$('#export_csv_results').html( response );
 				}
 			);
 		});
 		
+		
+		//
+		// update entries processes
+		//
+
+		// monitor file selection process, enable the import button when a file is selected
+		$('#csv_update_file').change( function(e) {
+			e.preventDefault();
+			console.log( 'update csv file selected.' );
+			var f = this.files[0];
+			if ( f ) {
+				var reader = new FileReader();
+				reader.onload = function( theFile ) {	
+					var content = theFile.target.result;				// get the file content
+					var data = content.split(/[\r\n]/g);		// get the header row
+					console.log('data length: ' + data.length);
+					if ( data.length === 0 ) {
+						console.log('bad data');
+						$('#update_entries_btn').prop('disabled',true);
+						$('#update_results').html('<h3>Bad Data Found!</h3><p>Please fix and try again.</p>');
+					} else {
+						$('#update_results').html('<h3>Ready to update ' + data.length + ' entries with ' + f.name + '</h3>');
+					}
+				};
+				reader.readAsText(f);			
+			} else {
+				console.log('Failed to load file');
+			}
+			$('#update_entries_btn').prop('disabled',false);
+		});
+
+
+		// import the file from above
+		$('#frm_update_entries').submit( function( e ) {
+			console.log('Update Entries clicked, form submitted via update_entries_btn');
+			$('#update_waiting').css('display', 'block');
+			
+			$('#update_entries_btn').prop('disabled', true);
+			$.ajax( {
+				url: ajaxurl,
+				type: 'POST',
+				data: new FormData( this ),
+				processData: false,
+				contentType: false,
+				success: function( results ) {
+					$('#update_waiting').css('display', 'none');
+					$('#update_results').html( results );
+					console.log('should be successful' );
+					$('#csv_update_file').val('');
+				}
+			});
+			e.preventDefault();
+		});
+
+
 		
 		// test to see if the page I want is loaded
 //		if ( ( $('#expo-settings').length > 0 ) || ( $('#import-sheets').length > 0 ) ) {

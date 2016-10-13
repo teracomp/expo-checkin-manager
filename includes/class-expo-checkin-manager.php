@@ -182,6 +182,7 @@ class Expo_Checkin_Manager {
 		$this->loader->add_action( 'wp_ajax_get_dbtable_columns', $plugin_admin, 'get_dbtable_columns_callback' );		
 		$this->loader->add_action( 'wp_ajax_set_export_entry_id', $plugin_admin, 'set_export_entry_id_callback' );
 		$this->loader->add_action( 'wp_ajax_export_entries', $plugin_admin, 'export_entries_callback' );
+		$this->loader->add_action( 'wp_ajax_update_entries', $plugin_admin, 'update_entries_callback' );
 
 	}
 

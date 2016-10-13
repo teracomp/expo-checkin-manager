@@ -1,6 +1,6 @@
 <?php
 /**
- * Partial of the import-sheets settings page
+ * Partial of the update entries page
  *
  * @link       http://teracomp.net
  * @since      1.0.0
@@ -9,8 +9,8 @@
  * @subpackage Expo_Checkin_Manager/admin/partials
  */
 ?>
-<div id="import-sheets" class="wrap">
-    <form id="frm_import_sheet" action="<?php echo admin_url( 'admin-ajax.php' ) ?>" method="post" enctype="multipart/form-data">
+<div id="update-entries" class="wrap">
+    <form id="frm_update_entries" action="<?php echo admin_url( 'admin-ajax.php' ) ?>" method="post" enctype="multipart/form-data">
         <?php	
             // /*
             // * Grab all value if already set
@@ -26,7 +26,7 @@
             /*
             * Set up hidden fields
             */
-            wp_nonce_field( 'import_csv', 'my_nonce_field' ); 
+            wp_nonce_field( 'update_entries', 'my_nonce_field' ); 
             settings_fields($this->plugin_name); 
 
         ?>
@@ -36,16 +36,10 @@
         <p>When the conference is over, we'll import the checkin data back to the database by:</p>
 		<ol>
             <li>Select the target form</li>
-            <li>Choose the file to import</li>
-            <li>Import the Sheet</li>
+            <li>Choose a file for updating</li>
+            <li>Update Entries</li>
         </ol>
         <p>The csv file will have the form_id and the lead_id as part of the key fields for updating data.</p>
-        <p>The code will use Gravity Forms API methods:</p>
-        	<ol>
-            	<li>get_entries(form_id). Returns all the entries for a given form.</li>
-            	<li>get_entry(entry_id). Returns one entry based on entry_id (which is the lead_id)</li>
-                <li>update_entry( array( field_id, value )). Allows us to update the entry by targeting the specific form field.</li>
-            </ol>
 
        	<h4>Step 1: Select Form</h4>
 		<fieldset>
@@ -67,9 +61,7 @@
             ?>
             </ul>        
         </fieldset>
-        
-        <h4><em>Working on this functionality</em></h4>
-<!--
+
        	<h4>Step 2: Select csv File</h4>
         <fieldset>
         	<input class="button-primary" type='file' name='csv_update_file' id='csv_update_file' accept='.csv'>
@@ -77,14 +69,18 @@
 
         <h4>Step 3: Update Entries</h4>
         <fieldset>
-        	<input type='hidden' name='action' value='import_csv'> 
+        	<input type='hidden' name='action' value='update_entries'> 
             <input disabled id="update_entries_btn" class="button-primary" type='submit' value='Update Entries'>
         </fieldset>
 
     
--->    </form>
+    </form>
+
+    <div id="update_waiting" style="display:none;">
+        <img src="<?php echo plugin_dir_url( __FILE__ );?>images/loading_bar2s.gif" width="265" height="97" alt="please wait..."/>
+    </div>
     
-    <div id="update_results"></div>
+    <div id="update_results" style="max-height:640px;overflow:scroll;"></div>
     
 
 </div>

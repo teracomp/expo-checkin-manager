@@ -89,6 +89,9 @@
     
     </form>
     
+    <div id="import_waiting" style="display:none;">
+        <img src="<?php echo plugin_dir_url( __FILE__ );?>images/loading_bar2s.gif" width="265" height="97" alt="please wait..."/>
+    </div>
     <div id="import_results"></div>
     
 </div>

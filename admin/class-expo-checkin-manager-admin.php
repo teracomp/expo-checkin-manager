@@ -134,7 +134,8 @@ class Expo_Checkin_Manager_Admin {
 	public function display_plugin_update_page() {
 		include_once( 'partials/update-entries.php' );
 	}
-		public function display_plugin_addedit_page() {
+	
+	public function display_plugin_addedit_page() {
 		include_once( 'partials/add-edit-records_settings.php' );
 	}
 		
@@ -211,7 +212,6 @@ class Expo_Checkin_Manager_Admin {
 		} else {
 				$valid['import_one_group'] =  'off' ;
 		}
-	
 		
 		return $valid; 
 	}
@@ -222,8 +222,7 @@ class Expo_Checkin_Manager_Admin {
 			$regs += intval( $e[19] ) + intval( $e[119] );
 		}
 		return $regs;
-	}
-	
+	}	
 	
 	public function get_form_fields_callback() {
 		$form_id = $_REQUEST['form_id'];
@@ -435,14 +434,11 @@ class Expo_Checkin_Manager_Admin {
 		}
 		$sql = "SELECT count(*) FROM $dbtable WHERE userid=$curruserid AND form_id=$form_id";
 		$group_total = $wpdb->get_var( $sql );
-
-
 		
 		$data = array( 'group_total' => $group_total );
 		$where = array( 'userid'=>$curruserid, 'form_id'=>$form_id );
 		$r = $wpdb->update( $dbtable, $data, $where );
 		
-
  		$theOptions['last_import_count']  = $group_total;
 		$theOptions['last_import_header'] = $hdr_row ; 
 	    update_option($this->plugin_name, $theOptions);
@@ -497,7 +493,7 @@ class Expo_Checkin_Manager_Admin {
 		
 		// get_field_number looks up the appropriate field for the current Gravity Forms form	
 		foreach ( $ans as $tmpdb ) {
-			$currdatetime = date('Y/m/d H:i:s', time());
+			$currdatetime = date('Y-m-d H:i:s', time());
 			$newEntry = array(
 				'form_id' => $form_id,
 				'payment_status' => $tmpdb->payment_status,
@@ -597,6 +593,7 @@ class Expo_Checkin_Manager_Admin {
 		}
 		return $cnt;
 	}
+	
 	public function export_entries() {
 		global $wpdb;
 		// get the entry id from the last import. export only the new records
@@ -752,7 +749,207 @@ class Expo_Checkin_Manager_Admin {
 		return ( $v );
 	}
 
+	// respond to ajax request to update entries from update-entries.php
+	public function update_entries_callback() {		
+		$response = 'this is the callback for update entries';		
+		$ans = $this->update_entries();
+	
+		if ( $ans ) {
+			$response = $ans;
+		} else {
+			$response = '<h3 class="alert alert-warning">Export Failed! Please refresh the page and try again!</h3>';
+		}		
+		echo $response;		
+		wp_die();	// required by ajax
+	}
 
+	public function get_field_label( $fields, $id ){
+		$label = '';
+		foreach ( $fields as $fld ) {
+			if ( $fld['id'] === $id ) {
+				if ( $fld['adminLabel'] <> '' ) {
+					$label = $fld['adminLabel'];
+				} else {
+					$label = $fld['label'];					
+				}
+				break;
+			}
+		}
+		return $label;	
+	}
+	
+	public function update_entries() {
+		global $wpdb;
 
+		$options = get_option( $this->plugin_name );
+		$form_id = $options['import_to_form'];		// for new entries
+		$myForm = GFAPI::get_form( $form_id );
+		$fields = $myForm['fields'];
+		
+		
+		// for user feedback
+		$filename = $_FILES['csv_update_file']['name'];
+
+		// get the data from the csv file and build an array
+		$ar = array(); // array to store all the data
+		ini_set('auto_detect_line_endings', true);		// this is the secret to reading files with php. without this, the line endings are lost
+		if ( ( $handle = fopen( $_FILES['csv_update_file']['tmp_name'], "r" ) ) !== FALSE ) {
+			$col_headers = fgetcsv( $handle, 1000,  $delimiter = ",", $enclosure = '"' );
+			while ( ( $data = fgetcsv( $handle, 1000,  $delimiter = ",", $enclosure = '"' ) ) !== FALSE ) { 
+				//
+				// shape data into an associative array
+				// this makes it easy and desriptive to reference when we process the update
+				//
+				if ( array(null) !== $data ) {	// ignore blank lines
+					for ( $i=0; $i<count($data); $i++ ){
+						$itm[ $col_headers[$i] ] = $data[$i];
+					}
+					array_push( $ar, $itm );  // get each row as a record
+				}
+			}
+			fclose( $handle );
+		} else {
+			$ans = 'Error! Could not open file!';
+			return $ans;
+		}
+	
+		/***
+		 * 1. entryid is > 0
+		 * 	-- get_entry
+		 *	-- if there is data in the new array, update the item
+		 *	
+		 * 2. entryid is 0...added on site
+		 *
+		 ****/	
+		$list = '<ol>';
+			 
+		foreach ( $ar as $itm ) {
+			
+			$changes = '';
+			
+			if ( $itm['entryid'] > 0 ) {
+				$entry_id = $itm['entryid'];	
+				$gf_entry = GFAPI::get_entry( $entry_id );
+				$error = is_wp_error( $gf_entry );
+				if ( $error ) {
+					$list .= '<li><strong>Error processing</strong> '. $itm['firstname'].' '.$itm['lastname'].', entry id#'.$itm['entryid'].' is not valid</li>';
+				} else {
+					$gf_form_id = $gf_entry['form_id'];
+					if ( $gf_form_id !== $form_id ) {
+						$error = true;
+						$list .= '<li><strong>Error processing</strong> '. $itm['firstname'].' '.$itm['lastname'].', form id#'.$gf_form_id.' is not the current form id #'.$form_id.'</li>';
+					}
+				}
+
+				if ( !$error ) {
+
+					$nbr = $itm['seqnbr']; // I create the seqnbr based on the entry position
+								
+					if ( $nbr === '1' ) {
+						//
+						// seqnbr '1' is the main registrant entry, we have a few fields to update
+						//		that are unique to the main entry
+						// beyond that, they're really all the same.
+						
+						// don't overwrite regreason with ''; get the value from the entry
+						// this happens because the checkin process updates the checkin status, 
+						//		but nothing ends up in regreason (because there is no reason).
+						if ( $itm['regreason'] === '' ) {
+							$itm['regreason'] = $this->get_field_number['regreason'];
+						}
+						
+						$theEntry = array(
+							'payment_status' => $itm['status'],
+							$this->get_field_number('group_name')    => $itm['group_name'],
+							$this->get_field_number('regtype')       => $itm['regtype'],
+							$this->get_field_number('regreason')     => $itm['regreason'],
+	
+							$this->get_field_number('reg1firstname') => $itm['firstname'],
+							$this->get_field_number('reg1lastname')  => $itm['lastname'],
+							$this->get_field_number('reg1address')   => $itm['address'],
+							$this->get_field_number('reg1city')      => $itm['city'],
+							$this->get_field_number('reg1state')     => $itm['state'],
+							$this->get_field_number('reg1zip')       => $itm['zip'],
+							$this->get_field_number('reg1email')     => $itm['email'],
+							$this->get_field_number('reg1phone')     => $itm['phone'],
+							$this->get_field_number('reg1precon')    => $itm['precon'],
+							$this->get_field_number('reg1checkedin') => $itm['checkedin'],
+							$this->get_field_number('reg1notes')     => $itm['notes']
+						);
+					} else {
+						$theEntry = array(
+							$this->get_field_number('reg'.$nbr.'firstname') => $itm['firstname'],
+							$this->get_field_number('reg'.$nbr.'lastname')  => $itm['lastname'],
+							$this->get_field_number('reg'.$nbr.'address')   => $itm['address'],
+							$this->get_field_number('reg'.$nbr.'city')      => $itm['city'],
+							$this->get_field_number('reg'.$nbr.'state')     => $itm['state'],
+							$this->get_field_number('reg'.$nbr.'zip')       => $itm['zip'],
+							$this->get_field_number('reg'.$nbr.'email')     => $itm['email'],
+							$this->get_field_number('reg'.$nbr.'phone')     => $itm['phone'],
+							$this->get_field_number('reg'.$nbr.'precon')    => $itm['precon'],
+							$this->get_field_number('reg'.$nbr.'checkedin') => $itm['checkedin'],
+							$this->get_field_number('reg'.$nbr.'notes')     => $itm['notes']
+						);
+					}
+	
+					// compare $gf_entry to $theEntry
+					// update the fields that changed
+					foreach ( $theEntry as $strFieldId => $newValue ) {
+						$oldValue = trim($gf_entry[ $strFieldId ]);
+						$newValue = trim( $newValue );
+						if ( ( $strFieldId > 0 ) && ( $oldValue !== $newValue ) ) {
+							$status = GFAPI::update_entry_field( $entry_id, $strFieldId, $newValue );
+							if ( $oldValue === '' ) { $oldValue = '(blank)'; }
+							if ( $newValue === '' ) { $newValue = '(blank)'; }							
+							$changes .= 'Changed: ' . $this->get_field_label($fields, $strFieldId) . ' from ' . $oldValue . ' to ' . $newValue . '; ';
+						}
+					}
+					
+					// record the changes made by this process
+					$notesField = $this->get_field_number('reg'.$nbr.'notes');
+					$newNotes = $gf_entry[ $notesField ] . $changes;
+					$status = GFAPI::update_entry_field( $entry_id, $notesField, $newNotes );
+					if ( $status ) {
+						$list .= '<li>Updated #'.$itm['entryid'].' :: '.$itm['firstname'].' '.$itm['lastname'].'</li>';
+					} else {
+						$list .= '<li>Error updating #'.$itm['entryid'].'</li>';
+					}
+				}
+			} else {
+				// we have new entry
+				$theEntry = array(
+					'form_id' => $form_id,
+					'payment_status' => $itm['status'],
+					$this->get_field_number('group_name')    => $itm['group_name'],
+					$this->get_field_number('regtype')       => $itm['regtype'],
+					$this->get_field_number('source')        => 'On site Registration',
+					$this->get_field_number('regreason')     => $itm['regreason'],
+
+					$this->get_field_number('reg1firstname') => $itm['firstname'],
+					$this->get_field_number('reg1lastname')  => $itm['lastname'],
+					$this->get_field_number('reg1address')   => $itm['address'],
+					$this->get_field_number('reg1city')      => $itm['city'],
+					$this->get_field_number('reg1state')     => $itm['state'],
+					$this->get_field_number('reg1zip')       => $itm['zip'],
+					$this->get_field_number('reg1email')     => $itm['email'],
+					$this->get_field_number('reg1phone')     => $itm['phone'],
+					$this->get_field_number('reg1precon')    => $itm['precon'],
+					$this->get_field_number('reg1checkedin') => $itm['checkedin'],
+					$this->get_field_number('reg1notes')     => $itm['notes']
+				);
+				$entry_id = GFAPI::add_entry( $theEntry );
+				$list .= '<li>New Entry: '.$entry_id.' '.$itm['firstname'].' '.$itm['lastname'].'</li>';
+			}
+
+		}
+
+		$list .= '</ol>';
+
+		$ans = $filename . ' has '. count($ar). ' entries to update or add. Content: ' . $list . ' <hr>Done';
+//		fclose( $csv );
+		
+		return $ans;
+		
+	}
 
 }
